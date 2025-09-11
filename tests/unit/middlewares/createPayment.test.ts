@@ -1,18 +1,25 @@
 import { Request, Response, NextFunction } from 'express';
-import { createPayment } from '@/middlewares/createPayment';
-import { NowPaymentsClient } from '@/client/NowPaymentsClient';
 import { CreatePaymentMiddlewareOptions } from '@/types';
 import { NowPaymentsValidationError } from '@/utils/errors';
+import { PaymentStatus } from '@/constants/statuses';
 
-jest.mock('@/client/NowPaymentsClient');
-const MockedNowPaymentsClient = NowPaymentsClient as jest.MockedClass<typeof NowPaymentsClient>;
+// Mock the client before importing the middleware
+const mockCreatePayment = jest.fn();
+jest.mock('@/client/NowPaymentsClient', () => {
+  return {
+    NowPaymentsClient: jest.fn().mockImplementation(() => ({
+      createPayment: mockCreatePayment,
+    })),
+  };
+});
+
+// Import middleware after mocking
+import { createPayment } from '@/middlewares/createPayment';
 
 describe('createPayment middleware', () => {
   let req: Partial<Request>;
   let res: Partial<Response>;
   let next: NextFunction;
-  let mockClient: jest.Mocked<NowPaymentsClient>;
-
   beforeEach(() => {
     req = {
       body: {
@@ -26,11 +33,7 @@ describe('createPayment middleware', () => {
     };
     next = jest.fn();
     
-    mockClient = {
-      createPayment: jest.fn(),
-    } as any;
-    
-    MockedNowPaymentsClient.mockImplementation(() => mockClient);
+    mockCreatePayment.mockClear();
   });
 
   afterEach(() => {
@@ -48,7 +51,7 @@ describe('createPayment middleware', () => {
 
     const mockResponse = {
       payment_id: '123456789',
-      payment_status: 'waiting',
+      payment_status: PaymentStatus.WAITING,
       pay_address: 'test-address',
       price_amount: 100,
       price_currency: 'USD',
@@ -62,12 +65,12 @@ describe('createPayment middleware', () => {
       network_precision: 8,
     };
 
-    mockClient.createPayment.mockResolvedValue(mockResponse);
+    mockCreatePayment.mockResolvedValue(mockResponse);
 
     const middleware = createPayment(options);
     await middleware(req as Request, res as Response, next);
 
-    expect(mockClient.createPayment).toHaveBeenCalledWith({
+    expect(mockCreatePayment).toHaveBeenCalledWith({
       price_amount: 100,
       price_currency: 'USD',
       pay_currency: 'BTC',
@@ -92,7 +95,7 @@ describe('createPayment middleware', () => {
 
     const mockResponse = {
       payment_id: '123456789',
-      payment_status: 'waiting',
+      payment_status: PaymentStatus.WAITING,
       pay_address: 'test-address',
       price_amount: 100,
       price_currency: 'USD',
@@ -106,7 +109,7 @@ describe('createPayment middleware', () => {
       network_precision: 8,
     };
 
-    mockClient.createPayment.mockResolvedValue(mockResponse);
+    mockCreatePayment.mockResolvedValue(mockResponse);
 
     const middleware = createPayment(options);
     await middleware(req as Request, res as Response, next);
@@ -159,7 +162,7 @@ describe('createPayment middleware', () => {
     };
 
     const error = new Error('API Error');
-    mockClient.createPayment.mockRejectedValue(error);
+    mockCreatePayment.mockRejectedValue(error);
 
     const middleware = createPayment(options);
     await middleware(req as Request, res as Response, next);

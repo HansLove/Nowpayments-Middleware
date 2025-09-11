@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import { NowPaymentsConfiguration } from '@/config/NowPaymentsConfig';
 import { NowPaymentsError } from '@/utils/errors';
 import { ErrorHandlingMode } from '@/types';

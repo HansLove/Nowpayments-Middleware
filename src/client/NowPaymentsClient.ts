@@ -45,7 +45,7 @@ export class NowPaymentsClient {
       (error: AxiosError) => {
         if (error.response) {
           const statusCode = error.response.status;
-          const message = error.response.data?.message || error.message;
+          const message = (error.response.data as any)?.message || error.message;
           throw new NowPaymentsApiError(message, statusCode, error);
         }
         

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { NowPaymentsClient } from '@/client/NowPaymentsClient';
 import { NowPaymentsConfiguration } from '@/config/NowPaymentsConfig';
-import { NowPaymentsApiError, NowPaymentsNetworkError, NowPaymentsConfigError } from '@/utils/errors';
+import { NowPaymentsConfigError } from '@/utils/errors';
 import { CreatePaymentRequest, CreatePaymentResponse } from '@/types';
 
 jest.mock('axios');
