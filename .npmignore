@@ -1,0 +1,20 @@
+# Source files
+src/
+tests/
+examples/
+
+# Config files
+tsconfig*.json
+.eslintrc*
+.prettierrc*
+jest.config.js
+
+# Development files
+.env.example
+*.md
+!README.md
+
+# Build artifacts
+*.log
+.nyc_output
+coverage/

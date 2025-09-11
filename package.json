@@ -1,0 +1,68 @@
+{
+  "name": "@taloon/nowpayments-middleware",
+  "version": "1.0.0",
+  "description": "Express middleware for NowPayments integration with dependency injection",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "build:watch": "tsc -p tsconfig.build.json --watch",
+    "clean": "rm -rf dist",
+    "prebuild": "npm run clean",
+    "prepublishOnly": "npm run test && npm run build",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [
+    "nowpayments",
+    "express",
+    "middleware",
+    "cryptocurrency",
+    "payments",
+    "typescript"
+  ],
+  "author": "Diego <DieGopherLT>",
+  "license": "MIT",
+  "peerDependencies": {
+    "express": "^4.17.0 || ^5.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.7.9"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.10.2",
+    "@typescript-eslint/eslint-plugin": "^8.18.1",
+    "@typescript-eslint/parser": "^8.18.1",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^9.1.0",
+    "express": "^4.21.2",
+    "jest": "^29.7.0",
+    "prettier": "^3.4.2",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DieGopherLT/nowpayments-middleware.git"
+  },
+  "bugs": {
+    "url": "https://github.com/DieGopherLT/nowpayments-middleware/issues"
+  },
+  "homepage": "https://github.com/DieGopherLT/nowpayments-middleware#readme"
+}
