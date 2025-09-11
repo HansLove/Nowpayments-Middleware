@@ -18,6 +18,8 @@ Express middleware for NowPayments cryptocurrency payment integration with depen
 npm install @taloon/nowpayments-middleware
 ```
 
+> **Note**: This package is not yet published to npm. For local installation instructions, see [local-installation.md](local-installation.md).
+
 ## Peer Dependencies
 
 ```bash

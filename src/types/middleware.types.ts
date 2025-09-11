@@ -9,7 +9,6 @@ import {
   PaymentWebhookPayload,
   PayoutWebhookPayload,
 } from './api.types';
-import { PaymentStatus, InvoiceStatus, PayoutStatus } from '@/constants/statuses';
 
 export type ErrorHandlingMode = 'next' | 'direct';
 
