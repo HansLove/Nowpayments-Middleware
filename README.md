@@ -18,14 +18,6 @@ Express middleware for NowPayments cryptocurrency payment integration with depen
 npm install @taloon/nowpayments-middleware
 ```
 
-> **Note**: This package is not yet published to npm. For local installation instructions, see [local-installation.md](local-installation.md).
-
-## Peer Dependencies
-
-```bash
-npm install express
-```
-
 ## Quick Start
 
 ### 1. Configure the middleware
@@ -367,18 +359,10 @@ Check out the `/examples` directory for more comprehensive examples:
 
 ## Requirements
 
-- Node.js >= 14.0.0
+- Node.js >= 18.18.0
 - Express.js >= 4.17.0
 - Valid NowPayments API key
 - Bearer token (required for payouts)
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
 
 ## Testing
 
@@ -416,12 +400,3 @@ MIT License - see the [LICENSE](LICENSE) file for details.
 - 📖 Check the [NowPayments API Documentation](https://documenter.getpostman.com/view/7907941/S1a32n38)
 - 💬 Community support through GitHub Discussions
 
-## Changelog
-
-### 1.0.0
-- Initial release
-- Support for payment creation, invoice payments, and payouts
-- Webhook handling for payment and payout events
-- TypeScript support with comprehensive type definitions
-- Configurable error handling
-- Environment variable fallback support
