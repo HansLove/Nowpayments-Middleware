@@ -40,7 +40,14 @@ class CreatePaymentMiddleware extends BaseMiddleware {
   }
 }
 
-const createPaymentMiddleware = new CreatePaymentMiddleware();
+let createPaymentMiddleware: CreatePaymentMiddleware | null = null;
+
+function getCreatePaymentMiddleware(): CreatePaymentMiddleware {
+  if (!createPaymentMiddleware) {
+    createPaymentMiddleware = new CreatePaymentMiddleware();
+  }
+  return createPaymentMiddleware;
+}
 
 export const createPayment = (options: CreatePaymentMiddlewareOptions): ExpressMiddleware =>
-  createPaymentMiddleware.create(options);
+  getCreatePaymentMiddleware().create(options);

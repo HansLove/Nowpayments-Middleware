@@ -40,7 +40,14 @@ class CreatePaymentByInvoiceMiddleware extends BaseMiddleware {
   }
 }
 
-const createPaymentByInvoiceMiddleware = new CreatePaymentByInvoiceMiddleware();
+let createPaymentByInvoiceMiddleware: CreatePaymentByInvoiceMiddleware | null = null;
+
+function getCreatePaymentByInvoiceMiddleware(): CreatePaymentByInvoiceMiddleware {
+  if (!createPaymentByInvoiceMiddleware) {
+    createPaymentByInvoiceMiddleware = new CreatePaymentByInvoiceMiddleware();
+  }
+  return createPaymentByInvoiceMiddleware;
+}
 
 export const createPaymentByInvoice = (options: CreatePaymentByInvoiceMiddlewareOptions): ExpressMiddleware =>
-  createPaymentByInvoiceMiddleware.create(options);
+  getCreatePaymentByInvoiceMiddleware().create(options);

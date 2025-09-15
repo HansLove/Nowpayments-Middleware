@@ -67,7 +67,14 @@ class PayoutWebhookMiddleware extends BaseMiddleware {
   }
 }
 
-const payoutWebhookMiddleware = new PayoutWebhookMiddleware();
+let payoutWebhookMiddleware: PayoutWebhookMiddleware | null = null;
+
+function getPayoutWebhookMiddleware(): PayoutWebhookMiddleware {
+  if (!payoutWebhookMiddleware) {
+    payoutWebhookMiddleware = new PayoutWebhookMiddleware();
+  }
+  return payoutWebhookMiddleware;
+}
 
 export const payoutWebhook = (callbacks: PayoutWebhookCallbacks): ExpressMiddleware =>
-  payoutWebhookMiddleware.create(callbacks);
+  getPayoutWebhookMiddleware().create(callbacks);
