@@ -1,0 +1,102 @@
+# NowPayments Middleware - Quick Start
+
+Express middleware for NowPayments cryptocurrency payment integration with dependency injection support.
+
+## Installation
+
+```bash
+npm install @taloon/nowpayments-middleware
+```
+
+## Basic Configuration
+
+```typescript
+import { NowPaymentsMiddleware } from '@taloon/nowpayments-middleware';
+
+// Configure globally
+NowPaymentsMiddleware.configure({
+  apiKey: 'your-nowpayments-api-key',
+  bearerToken: 'your-bearer-token', // Optional, required for payouts
+  errorHandling: 'next', // or 'direct'
+});
+```
+
+## Environment Variables Setup
+
+```bash
+NOWPAYMENTS_API_KEY=your-api-key
+NOWPAYMENTS_BEARER_TOKEN=your-bearer-token
+NOWPAYMENTS_BASE_URL=https://api.nowpayments.io/v1
+```
+
+## Simple Payment Creation
+
+```typescript
+import express from 'express';
+
+const app = express();
+app.use(express.json());
+
+app.post('/create-payment',
+  NowPaymentsMiddleware.createPayment({
+    mapRequest: (req) => ({
+      price_amount: req.body.amount,
+      price_currency: req.body.currency,
+      pay_currency: req.body.cryptoCurrency,
+      order_id: req.body.orderId,
+      customer_email: req.body.email,
+      ipn_callback_url: 'https://your-domain.com/webhook/payment',
+    }),
+    transformResponse: (response) => ({
+      paymentId: response.payment_id,
+      status: response.payment_status,
+      payAddress: response.pay_address,
+      amount: response.pay_amount,
+      currency: response.pay_currency,
+    }),
+  }),
+  (req, res) => {
+    const payment = res.locals.nowPaymentsResponse;
+    res.json({ success: true, payment });
+  }
+);
+```
+
+## Basic Webhook Handler
+
+```typescript
+app.post('/webhook/payment',
+  NowPaymentsMiddleware.paymentWebhook({
+    onWaiting: async (payload) => {
+      console.log('Payment waiting:', payload.payment_id);
+    },
+    onFinished: async (payload) => {
+      console.log('Payment completed:', payload.payment_id);
+      // Update your database, send notifications, etc.
+    },
+    onFailed: async (payload) => {
+      console.log('Payment failed:', payload.payment_id);
+      // Handle failed payment
+    },
+  })
+);
+```
+
+## Error Handling
+
+```typescript
+app.use((error, req, res, next) => {
+  if (error instanceof NowPaymentsError) {
+    return res.status(error.statusCode || 400).json({
+      error: {
+        code: error.code,
+        message: error.message,
+      },
+    });
+  }
+  
+  res.status(500).json({
+    error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred' }
+  });
+});
+```

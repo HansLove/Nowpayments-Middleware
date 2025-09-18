@@ -1,0 +1,363 @@
+# Error Handling
+
+Comprehensive error handling guide for NowPayments middleware.
+
+## Error Types
+
+The middleware provides several error types for different scenarios:
+
+```typescript
+import {
+  NowPaymentsError,
+  NowPaymentsApiError,
+  NowPaymentsConfigError,
+  NowPaymentsValidationError,
+  NowPaymentsNetworkError,
+} from '@taloon/nowpayments-middleware';
+```
+
+## Basic Error Handling
+
+```typescript
+import express from 'express';
+import { NowPaymentsError } from '@taloon/nowpayments-middleware';
+
+const app = express();
+
+// Global error handler
+app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Application error:', error);
+  
+  if (error instanceof NowPaymentsError) {
+    return res.status(error.statusCode || 400).json({
+      success: false,
+      error: {
+        code: error.code,
+        message: error.message,
+      },
+    });
+  }
+  
+  // Handle other errors
+  res.status(500).json({
+    success: false,
+    error: {
+      code: 'INTERNAL_ERROR',
+      message: 'An unexpected error occurred',
+    },
+  });
+});
+```
+
+## Error Handling Modes
+
+### Next Mode (Recommended)
+
+Passes errors to Express error handling middleware:
+
+```typescript
+NowPaymentsMiddleware.configure({
+  apiKey: 'your-api-key',
+  errorHandling: 'next', // Default
+});
+
+// Errors will be passed to your error middleware
+app.use((error, req, res, next) => {
+  // Handle NowPayments errors here
+});
+```
+
+### Direct Mode
+
+Sends error responses directly (not recommended for production):
+
+```typescript
+NowPaymentsMiddleware.configure({
+  apiKey: 'your-api-key',
+  errorHandling: 'direct',
+});
+
+// Errors are sent directly as HTTP responses
+// No additional error handling needed
+```
+
+## Specific Error Handling
+
+### API Errors
+
+```typescript
+app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (error instanceof NowPaymentsApiError) {
+    console.error('NowPayments API error:', {
+      message: error.message,
+      statusCode: error.statusCode,
+      code: error.code,
+    });
+    
+    return res.status(error.statusCode).json({
+      error: {
+        code: 'PAYMENT_API_ERROR',
+        message: 'Payment service is temporarily unavailable',
+      },
+    });
+  }
+  
+  next(error);
+});
+```
+
+### Configuration Errors
+
+```typescript
+app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (error instanceof NowPaymentsConfigError) {
+    console.error('Configuration error:', error.message);
+    
+    return res.status(500).json({
+      error: {
+        code: 'SERVICE_CONFIGURATION_ERROR',
+        message: 'Payment service is not properly configured',
+      },
+    });
+  }
+  
+  next(error);
+});
+```
+
+### Validation Errors
+
+```typescript
+app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (error instanceof NowPaymentsValidationError) {
+    console.error('Validation error:', error.message);
+    
+    return res.status(400).json({
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: error.message,
+      },
+    });
+  }
+  
+  next(error);
+});
+```
+
+### Network Errors
+
+```typescript
+app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (error instanceof NowPaymentsNetworkError) {
+    console.error('Network error:', error.message);
+    
+    return res.status(503).json({
+      error: {
+        code: 'NETWORK_ERROR',
+        message: 'Payment service is temporarily unavailable',
+      },
+    });
+  }
+  
+  next(error);
+});
+```
+
+## Complete Error Handler
+
+```typescript
+import express from 'express';
+import {
+  NowPaymentsError,
+  NowPaymentsApiError,
+  NowPaymentsConfigError,
+  NowPaymentsValidationError,
+  NowPaymentsNetworkError,
+} from '@taloon/nowpayments-middleware';
+
+const errorHandler = (error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  // Log all errors
+  console.error('Error occurred:', {
+    url: req.url,
+    method: req.method,
+    error: error.message,
+    stack: error.stack,
+  });
+
+  // Handle NowPayments specific errors
+  if (error instanceof NowPaymentsApiError) {
+    return res.status(error.statusCode).json({
+      success: false,
+      error: {
+        code: 'PAYMENT_API_ERROR',
+        message: 'Payment service error',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      },
+    });
+  }
+
+  if (error instanceof NowPaymentsConfigError) {
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: 'CONFIGURATION_ERROR',
+        message: 'Service configuration error',
+      },
+    });
+  }
+
+  if (error instanceof NowPaymentsValidationError) {
+    return res.status(400).json({
+      success: false,
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: error.message,
+      },
+    });
+  }
+
+  if (error instanceof NowPaymentsNetworkError) {
+    return res.status(503).json({
+      success: false,
+      error: {
+        code: 'NETWORK_ERROR',
+        message: 'Payment service temporarily unavailable',
+      },
+    });
+  }
+
+  if (error instanceof NowPaymentsError) {
+    return res.status(error.statusCode || 400).json({
+      success: false,
+      error: {
+        code: error.code,
+        message: error.message,
+      },
+    });
+  }
+
+  // Handle other Express errors
+  if (error.status === 404) {
+    return res.status(404).json({
+      success: false,
+      error: {
+        code: 'NOT_FOUND',
+        message: 'Resource not found',
+      },
+    });
+  }
+
+  // Generic error handler
+  res.status(500).json({
+    success: false,
+    error: {
+      code: 'INTERNAL_ERROR',
+      message: 'An unexpected error occurred',
+    },
+  });
+};
+
+// Use the error handler
+app.use(errorHandler);
+```
+
+## Webhook Error Handling
+
+```typescript
+// For webhooks, always respond with 200 to acknowledge receipt
+app.post('/webhook/payment',
+  NowPaymentsMiddleware.paymentWebhook({
+    onFinished: async (payload) => {
+      try {
+        // Process payment completion
+        await processPaymentCompletion(payload);
+      } catch (error) {
+        console.error('Error processing payment webhook:', error);
+        // Don't throw - log and continue
+      }
+    },
+    onFailed: async (payload) => {
+      try {
+        // Handle payment failure
+        await handlePaymentFailure(payload);
+      } catch (error) {
+        console.error('Error handling payment failure:', error);
+        // Don't throw - log and continue
+      }
+    },
+  }),
+  // Custom webhook error handler
+  (error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error('Webhook processing error:', error);
+    
+    // Always acknowledge webhook receipt
+    res.status(200).json({
+      received: true,
+      error: 'Processing failed but webhook acknowledged',
+    });
+  }
+);
+```
+
+## Retry Logic
+
+```typescript
+import axios from 'axios';
+
+const retryableOperations = async (operation: () => Promise<any>, maxRetries = 3) => {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (error instanceof NowPaymentsNetworkError && attempt < maxRetries) {
+        console.log(`Attempt ${attempt} failed, retrying...`);
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        continue;
+      }
+      throw error;
+    }
+  }
+};
+
+// Usage in your route
+app.post('/create-payment', async (req, res, next) => {
+  try {
+    await retryableOperations(async () => {
+      // Your payment creation logic here
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+```
+
+## Development vs Production
+
+```typescript
+const isDevelopment = process.env.NODE_ENV === 'development';
+
+app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Error:', error);
+
+  if (error instanceof NowPaymentsError) {
+    return res.status(error.statusCode || 400).json({
+      success: false,
+      error: {
+        code: error.code,
+        message: error.message,
+        // Include stack trace only in development
+        ...(isDevelopment && { stack: error.stack }),
+      },
+    });
+  }
+
+  res.status(500).json({
+    success: false,
+    error: {
+      code: 'INTERNAL_ERROR',
+      message: isDevelopment ? error.message : 'An unexpected error occurred',
+      ...(isDevelopment && { stack: error.stack }),
+    },
+  });
+});
+```

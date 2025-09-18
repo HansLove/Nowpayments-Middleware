@@ -1,0 +1,243 @@
+# Webhook Examples
+
+Complete webhook handling examples for payment and payout status updates.
+
+## Payment Webhook Handler
+
+```typescript
+import express from 'express';
+import { NowPaymentsMiddleware } from '@taloon/nowpayments-middleware';
+
+const app = express();
+app.use(express.json());
+
+NowPaymentsMiddleware.configure({
+  apiKey: 'your-api-key-here',
+  errorHandling: 'next',
+});
+
+app.post('/webhook/payment',
+  NowPaymentsMiddleware.paymentWebhook({
+    onWaiting: async (payload) => {
+      console.log('Payment waiting:', payload.payment_id);
+      // Payment is waiting for customer to send funds
+    },
+    
+    onConfirming: async (payload) => {
+      console.log('Payment confirming:', payload.payment_id);
+      // Transaction is confirming on blockchain
+    },
+    
+    onConfirmed: async (payload) => {
+      console.log('Payment confirmed:', payload.payment_id);
+      // Transaction confirmed on blockchain
+    },
+    
+    onSending: async (payload) => {
+      console.log('Payment sending:', payload.payment_id);
+      // Funds are being sent to your wallet
+    },
+    
+    onPartiallyPaid: async (payload) => {
+      console.log('Payment partially paid:', payload.payment_id);
+      console.log('Expected:', payload.pay_amount);
+      console.log('Received:', payload.actually_paid);
+      // Customer sent less than required amount
+    },
+    
+    onFinished: async (payload) => {
+      console.log('Payment finished:', payload.payment_id);
+      console.log('Order ID:', payload.order_id);
+      
+      try {
+        // Update your database
+        // Send confirmation email
+        // Fulfill the order
+        console.log('✅ Payment completed successfully');
+      } catch (error) {
+        console.error('Error updating order:', error);
+      }
+    },
+    
+    onFailed: async (payload) => {
+      console.log('Payment failed:', payload.payment_id);
+      
+      try {
+        // Cancel the order
+        // Notify customer
+        // Handle refund if necessary
+        console.log('❌ Payment failed - order cancelled');
+      } catch (error) {
+        console.error('Error cancelling order:', error);
+      }
+    },
+    
+    onExpired: async (payload) => {
+      console.log('Payment expired:', payload.payment_id);
+      
+      try {
+        // Mark order as expired
+        // Notify customer about expiration
+        console.log('⏰ Payment expired - order cancelled');
+      } catch (error) {
+        console.error('Error handling expired payment:', error);
+      }
+    },
+    
+    onRefunded: async (payload) => {
+      console.log('Payment refunded:', payload.payment_id);
+      
+      try {
+        // Process refund in your system
+        // Update order status
+        // Notify customer
+        console.log('💰 Payment refunded - order refunded');
+      } catch (error) {
+        console.error('Error processing refund:', error);
+      }
+    },
+  })
+);
+```
+
+## Payout Webhook Handler
+
+```typescript
+app.post('/webhook/payout',
+  NowPaymentsMiddleware.payoutWebhook({
+    onWaiting: async (payload) => {
+      console.log('Payout waiting:', payload.id);
+      // Payout is waiting to be processed
+    },
+    
+    onProcessing: async (payload) => {
+      console.log('Payout processing:', payload.id);
+      // Payout is being processed
+    },
+    
+    onSending: async (payload) => {
+      console.log('Payout sending:', payload.id);
+      // Payout is being sent to destination address
+    },
+    
+    onFinished: async (payload) => {
+      console.log('Payout finished:', payload.id);
+      console.log('Hash:', payload.hash);
+      
+      try {
+        // Update payout status in database
+        // Notify user about successful payout
+        console.log('✅ Payout completed successfully');
+      } catch (error) {
+        console.error('Error updating payout status:', error);
+      }
+    },
+    
+    onFailed: async (payload) => {
+      console.log('Payout failed:', payload.id);
+      console.log('Error:', payload.error);
+      
+      try {
+        // Mark payout as failed
+        // Investigate issue
+        // Potentially retry or refund
+        console.log('❌ Payout failed - manual review required');
+      } catch (error) {
+        console.error('Error handling failed payout:', error);
+      }
+    },
+    
+    onRejected: async (payload) => {
+      console.log('Payout rejected:', payload.id);
+      
+      try {
+        // Handle rejected payout
+        // Return funds to user balance
+        // Notify user about rejection
+        console.log('🚫 Payout rejected - returning funds');
+      } catch (error) {
+        console.error('Error handling rejected payout:', error);
+      }
+    },
+  })
+);
+```
+
+## Complete Webhook Flow with Order Management
+
+```typescript
+const orders = new Map<string, any>();
+const payouts = new Map<string, any>();
+
+app.post('/webhook/payment',
+  NowPaymentsMiddleware.paymentWebhook({
+    onWaiting: async (payload) => {
+      console.log(`💰 Payment ${payload.payment_id} is waiting for funds`);
+      
+      const order = Array.from(orders.values()).find(o => o.paymentId === payload.payment_id.toString());
+      if (order) {
+        order.status = 'pending';
+        orders.set(order.id, order);
+      }
+    },
+    
+    onFinished: async (payload) => {
+      console.log(`🎉 Payment ${payload.payment_id} completed successfully!`);
+      console.log(`Order: ${payload.order_id}`);
+      console.log(`Amount: ${payload.actually_paid} ${payload.pay_currency}`);
+      
+      if (payload.order_id) {
+        const order = orders.get(payload.order_id);
+        if (order) {
+          order.status = 'paid';
+          orders.set(payload.order_id, order);
+          
+          console.log(`📦 Order ${payload.order_id} marked as paid`);
+        }
+      }
+    },
+    
+    onFailed: async (payload) => {
+      console.log(`❌ Payment ${payload.payment_id} failed`);
+      
+      if (payload.order_id) {
+        const order = orders.get(payload.order_id);
+        if (order) {
+          order.status = 'failed';
+          orders.set(payload.order_id, order);
+          
+          console.log(`📦 Order ${payload.order_id} marked as failed`);
+        }
+      }
+    },
+    
+    onExpired: async (payload) => {
+      console.log(`⏰ Payment ${payload.payment_id} expired`);
+      
+      if (payload.order_id) {
+        const order = orders.get(payload.order_id);
+        if (order) {
+          order.status = 'expired';
+          orders.set(payload.order_id, order);
+          
+          console.log(`📦 Order ${payload.order_id} marked as expired`);
+        }
+      }
+    },
+  })
+);
+```
+
+## Error Handling for Webhooks
+
+```typescript
+app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Webhook error:', error);
+  
+  // Always respond with 200 to acknowledge webhook receipt
+  // Log errors for investigation but don't fail the webhook
+  res.status(200).json({
+    received: true,
+  });
+});
+```

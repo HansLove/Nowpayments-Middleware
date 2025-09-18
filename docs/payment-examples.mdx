@@ -1,0 +1,202 @@
+# Payment Examples
+
+Complete examples for creating payments with NowPayments middleware.
+
+## Basic Payment Flow
+
+```typescript
+import express from 'express';
+import { NowPaymentsMiddleware } from '@taloon/nowpayments-middleware';
+
+const app = express();
+app.use(express.json());
+
+NowPaymentsMiddleware.configure({
+  apiKey: 'your-api-key-here',
+  bearerToken: 'your-bearer-token-here',
+  errorHandling: 'next',
+});
+
+app.post('/create-payment',
+  NowPaymentsMiddleware.createPayment({
+    mapRequest: (req) => ({
+      price_amount: req.body.amount,
+      price_currency: req.body.currency,
+      pay_currency: req.body.cryptoCurrency,
+      order_id: req.body.orderId,
+      order_description: req.body.description,
+      customer_email: req.body.email,
+      ipn_callback_url: 'https://your-domain.com/webhook/payment',
+    }),
+    transformResponse: (response) => ({
+      paymentId: response.payment_id,
+      status: response.payment_status,
+      payAddress: response.pay_address,
+      amount: response.pay_amount,
+      currency: response.pay_currency,
+      expiresAt: response.expiration_estimate_date,
+    }),
+  }),
+  (req, res) => {
+    const payment = res.locals.nowPaymentsResponse;
+    
+    res.status(201).json({
+      success: true,
+      payment,
+    });
+  }
+);
+```
+
+## Invoice-Based Payment
+
+```typescript
+app.post('/create-invoice-payment',
+  NowPaymentsMiddleware.createPaymentByInvoice({
+    mapRequest: (req) => ({
+      iid: req.body.invoiceId,
+      pay_currency: req.body.cryptoCurrency,
+      order_id: req.body.orderId,
+      order_description: req.body.description,
+      customer_email: req.body.email,
+      ipn_callback_url: 'https://your-domain.com/webhook/payment',
+    }),
+    transformResponse: (response) => ({
+      paymentId: response.payment_id,
+      invoiceId: response.invoice_id,
+      status: response.payment_status,
+      payAddress: response.pay_address,
+      amount: response.pay_amount,
+      currency: response.pay_currency,
+    }),
+  }),
+  (req, res) => {
+    const payment = res.locals.nowPaymentsResponse;
+    res.json({ success: true, payment });
+  }
+);
+```
+
+## Payout Creation
+
+```typescript
+app.post('/create-payout',
+  NowPaymentsMiddleware.createPayout({
+    mapRequest: (req) => ({
+      withdrawals: req.body.withdrawals.map((withdrawal: any) => ({
+        address: withdrawal.address,
+        currency: withdrawal.currency,
+        amount: withdrawal.amount,
+        ipn_callback_url: 'https://your-domain.com/webhook/payout',
+      })),
+    }),
+    transformResponse: (response) => ({
+      payoutId: response.id,
+      withdrawals: response.withdrawals.map(w => ({
+        id: w.id,
+        status: w.status,
+        address: w.address,
+        amount: w.amount,
+        currency: w.currency,
+      })),
+    }),
+  }),
+  (req, res) => {
+    const payout = res.locals.nowPaymentsResponse;
+    
+    res.status(200).json({
+      success: true,
+      payout,
+    });
+  }
+);
+```
+
+## Advanced Payment with Order Management
+
+```typescript
+interface Order {
+  id: string;
+  amount: number;
+  currency: string;
+  cryptoCurrency: string;
+  status: 'pending' | 'paid' | 'failed' | 'expired';
+  paymentId?: string;
+  customerEmail: string;
+}
+
+const orders = new Map<string, Order>();
+
+app.post('/orders',
+  NowPaymentsMiddleware.createPayment({
+    mapRequest: (req) => {
+      const orderId = `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      const order: Order = {
+        id: orderId,
+        amount: req.body.amount,
+        currency: req.body.currency,
+        cryptoCurrency: req.body.cryptoCurrency,
+        status: 'pending',
+        customerEmail: req.body.email,
+      };
+      
+      orders.set(orderId, order);
+      
+      return {
+        price_amount: req.body.amount,
+        price_currency: req.body.currency,
+        pay_currency: req.body.cryptoCurrency,
+        order_id: orderId,
+        order_description: `Order ${orderId}`,
+        customer_email: req.body.email,
+        ipn_callback_url: `${req.protocol}://${req.get('host')}/webhook/payment`,
+      };
+    },
+    transformResponse: (response) => {
+      const orderId = response.order_id!;
+      const order = orders.get(orderId);
+      
+      if (order) {
+        order.paymentId = response.payment_id;
+        orders.set(orderId, order);
+      }
+      
+      return {
+        orderId,
+        paymentId: response.payment_id,
+        status: response.payment_status,
+        payAddress: response.pay_address,
+        payAmount: response.pay_amount,
+        payCurrency: response.pay_currency,
+        expiresAt: response.expiration_estimate_date,
+        network: response.network,
+      };
+    },
+  }),
+  (req, res) => {
+    const payment = res.locals.nowPaymentsResponse as any;
+    
+    res.status(201).json({
+      success: true,
+      message: 'Order created successfully',
+      data: payment,
+    });
+  }
+);
+
+app.get('/orders/:orderId', (req, res) => {
+  const order = orders.get(req.params.orderId);
+  
+  if (!order) {
+    return res.status(404).json({
+      error: 'Order not found',
+    });
+  }
+  
+  res.json({
+    success: true,
+    data: order,
+  });
+});
+```

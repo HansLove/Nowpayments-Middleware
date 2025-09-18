@@ -1,0 +1,214 @@
+# Configuration Examples
+
+Complete configuration examples for different environments and use cases.
+
+## Basic Configuration
+
+```typescript
+import { NowPaymentsMiddleware } from '@taloon/nowpayments-middleware';
+
+// Simple configuration
+NowPaymentsMiddleware.configure({
+  apiKey: 'your-nowpayments-api-key',
+  bearerToken: 'your-bearer-token', // Optional, required for payouts
+});
+```
+
+## Environment-Based Configuration
+
+```typescript
+// Development environment
+if (process.env.NODE_ENV === 'development') {
+  NowPaymentsMiddleware.configure({
+    apiKey: process.env.NOWPAYMENTS_API_KEY_DEV!,
+    bearerToken: process.env.NOWPAYMENTS_BEARER_TOKEN_DEV,
+    baseURL: 'https://api-sandbox.nowpayments.io/v1', // Sandbox URL
+    errorHandling: 'direct', // More verbose errors in development
+  });
+}
+
+// Production environment
+if (process.env.NODE_ENV === 'production') {
+  NowPaymentsMiddleware.configure({
+    apiKey: process.env.NOWPAYMENTS_API_KEY!,
+    bearerToken: process.env.NOWPAYMENTS_BEARER_TOKEN,
+    baseURL: 'https://api.nowpayments.io/v1',
+    errorHandling: 'next', // Use Express error handling
+  });
+}
+```
+
+## Configuration Interface
+
+```typescript
+interface NowPaymentsConfig {
+  apiKey: string;                    // Required: Your NowPayments API key
+  bearerToken?: string;              // Optional: Bearer token for payouts
+  baseURL?: string;                  // Optional: API base URL
+  errorHandling?: 'next' | 'direct'; // Optional: Error handling mode
+}
+```
+
+## Environment Variables Setup
+
+```bash
+# .env file
+NOWPAYMENTS_API_KEY=your-api-key-here
+NOWPAYMENTS_BEARER_TOKEN=your-bearer-token-here
+NOWPAYMENTS_BASE_URL=https://api.nowpayments.io/v1
+
+# Development
+NOWPAYMENTS_API_KEY_DEV=your-dev-api-key
+NOWPAYMENTS_BEARER_TOKEN_DEV=your-dev-bearer-token
+
+# Production
+NOWPAYMENTS_API_KEY_PROD=your-prod-api-key
+NOWPAYMENTS_BEARER_TOKEN_PROD=your-prod-bearer-token
+```
+
+## Advanced Configuration with Validation
+
+```typescript
+import { NowPaymentsMiddleware } from '@taloon/nowpayments-middleware';
+
+class ConfigManager {
+  static initialize() {
+    const requiredEnvVars = ['NOWPAYMENTS_API_KEY'];
+    const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+    
+    if (missingVars.length > 0) {
+      throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
+    }
+
+    NowPaymentsMiddleware.configure({
+      apiKey: process.env.NOWPAYMENTS_API_KEY!,
+      bearerToken: process.env.NOWPAYMENTS_BEARER_TOKEN,
+      baseURL: process.env.NOWPAYMENTS_BASE_URL || 'https://api.nowpayments.io/v1',
+      errorHandling: (process.env.NODE_ENV === 'production' ? 'next' : 'direct') as 'next' | 'direct',
+    });
+
+    console.log('✅ NowPayments middleware configured successfully');
+  }
+
+  static getConfig() {
+    return {
+      apiKey: process.env.NOWPAYMENTS_API_KEY,
+      hasBearer: !!process.env.NOWPAYMENTS_BEARER_TOKEN,
+      environment: process.env.NODE_ENV || 'development',
+      baseURL: process.env.NOWPAYMENTS_BASE_URL || 'https://api.nowpayments.io/v1',
+    };
+  }
+}
+
+// Initialize configuration
+ConfigManager.initialize();
+```
+
+## Docker Environment Configuration
+
+```dockerfile
+# Dockerfile
+FROM node:18-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --only=production
+
+COPY . .
+
+# Environment variables for runtime
+ENV NODE_ENV=production
+ENV NOWPAYMENTS_BASE_URL=https://api.nowpayments.io/v1
+
+EXPOSE 3000
+
+CMD ["npm", "start"]
+```
+
+```yaml
+# docker-compose.yml
+version: '3.8'
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NOWPAYMENTS_API_KEY=${NOWPAYMENTS_API_KEY}
+      - NOWPAYMENTS_BEARER_TOKEN=${NOWPAYMENTS_BEARER_TOKEN}
+      - NOWPAYMENTS_BASE_URL=https://api.nowpayments.io/v1
+    env_file:
+      - .env.production
+```
+
+## Testing Configuration
+
+```typescript
+// test-config.ts
+import { NowPaymentsMiddleware } from '@taloon/nowpayments-middleware';
+
+export const setupTestConfig = () => {
+  NowPaymentsMiddleware.configure({
+    apiKey: 'test-api-key',
+    bearerToken: 'test-bearer-token',
+    baseURL: 'https://api-sandbox.nowpayments.io/v1',
+    errorHandling: 'direct',
+  });
+};
+
+// In your tests
+beforeAll(() => {
+  setupTestConfig();
+});
+```
+
+## Configuration with Health Check
+
+```typescript
+import express from 'express';
+import { NowPaymentsMiddleware } from '@taloon/nowpayments-middleware';
+
+const app = express();
+
+// Configuration
+NowPaymentsMiddleware.configure({
+  apiKey: process.env.NOWPAYMENTS_API_KEY!,
+  bearerToken: process.env.NOWPAYMENTS_BEARER_TOKEN,
+  errorHandling: 'next',
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  const config = {
+    hasApiKey: !!process.env.NOWPAYMENTS_API_KEY,
+    hasBearerToken: !!process.env.NOWPAYMENTS_BEARER_TOKEN,
+    environment: process.env.NODE_ENV || 'development',
+    timestamp: new Date().toISOString(),
+  };
+
+  res.json({
+    status: 'ok',
+    service: 'nowpayments-middleware',
+    config,
+  });
+});
+
+// Configuration validation endpoint
+app.get('/config/validate', (req, res) => {
+  try {
+    const isValid = !!process.env.NOWPAYMENTS_API_KEY;
+    
+    res.json({
+      valid: isValid,
+      message: isValid ? 'Configuration is valid' : 'Missing required API key',
+    });
+  } catch (error) {
+    res.status(500).json({
+      valid: false,
+      error: 'Configuration validation failed',
+    });
+  }
+});
+```

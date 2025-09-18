@@ -1,0 +1,326 @@
+# API Reference
+
+Complete API reference for NowPayments middleware functions and types.
+
+## Middleware Functions
+
+### `createPayment(options)`
+
+Creates a payment middleware for standard payments.
+
+```typescript
+interface CreatePaymentMiddlewareOptions {
+  mapRequest: (req: Request) => CreatePaymentRequest;
+  transformResponse?: (response: CreatePaymentResponse) => unknown;
+}
+
+// Usage
+app.post('/payment',
+  NowPaymentsMiddleware.createPayment({
+    mapRequest: (req) => ({
+      price_amount: req.body.amount,
+      price_currency: req.body.currency,
+      pay_currency: req.body.cryptoCurrency,
+      order_id: req.body.orderId,
+      customer_email: req.body.email,
+      ipn_callback_url: 'https://your-domain.com/webhook',
+    }),
+    transformResponse: (response) => ({
+      paymentId: response.payment_id,
+      status: response.payment_status,
+      payAddress: response.pay_address,
+    }),
+  }),
+  (req, res) => {
+    const payment = res.locals.nowPaymentsResponse;
+    res.json({ payment });
+  }
+);
+```
+
+### `createPaymentByInvoice(options)`
+
+Creates a payment middleware for invoice-based payments.
+
+```typescript
+interface CreatePaymentByInvoiceMiddlewareOptions {
+  mapRequest: (req: Request) => CreatePaymentByInvoiceRequest;
+  transformResponse?: (response: CreatePaymentByInvoiceResponse) => unknown;
+}
+
+// Usage
+app.post('/invoice-payment',
+  NowPaymentsMiddleware.createPaymentByInvoice({
+    mapRequest: (req) => ({
+      iid: req.body.invoiceId,
+      pay_currency: req.body.cryptoCurrency,
+      order_id: req.body.orderId,
+      customer_email: req.body.email,
+    }),
+  }),
+  (req, res) => {
+    const payment = res.locals.nowPaymentsResponse;
+    res.json({ payment });
+  }
+);
+```
+
+### `createPayout(options)`
+
+Creates a payout middleware for withdrawals.
+
+```typescript
+interface CreatePayoutMiddlewareOptions {
+  mapRequest: (req: Request) => CreatePayoutRequest;
+  transformResponse?: (response: CreatePayoutResponse) => unknown;
+}
+
+// Usage
+app.post('/payout',
+  NowPaymentsMiddleware.createPayout({
+    mapRequest: (req) => ({
+      withdrawals: req.body.withdrawals,
+    }),
+    transformResponse: (response) => ({
+      payoutId: response.id,
+      withdrawals: response.withdrawals,
+    }),
+  }),
+  (req, res) => {
+    const payout = res.locals.nowPaymentsResponse;
+    res.json({ payout });
+  }
+);
+```
+
+### `paymentWebhook(callbacks)`
+
+Creates a webhook middleware for payment status updates.
+
+```typescript
+interface PaymentWebhookCallbacks {
+  onWaiting?: (payload: PaymentWebhookPayload) => void | Promise<void>;
+  onConfirming?: (payload: PaymentWebhookPayload) => void | Promise<void>;
+  onConfirmed?: (payload: PaymentWebhookPayload) => void | Promise<void>;
+  onSending?: (payload: PaymentWebhookPayload) => void | Promise<void>;
+  onPartiallyPaid?: (payload: PaymentWebhookPayload) => void | Promise<void>;
+  onFinished?: (payload: PaymentWebhookPayload) => void | Promise<void>;
+  onFailed?: (payload: PaymentWebhookPayload) => void | Promise<void>;
+  onExpired?: (payload: PaymentWebhookPayload) => void | Promise<void>;
+  onRefunded?: (payload: PaymentWebhookPayload) => void | Promise<void>;
+}
+
+// Usage
+app.post('/webhook/payment',
+  NowPaymentsMiddleware.paymentWebhook({
+    onFinished: async (payload) => {
+      console.log('Payment completed:', payload.payment_id);
+      // Update database, send notifications
+    },
+    onFailed: async (payload) => {
+      console.log('Payment failed:', payload.payment_id);
+      // Handle failure
+    },
+  })
+);
+```
+
+### `payoutWebhook(callbacks)`
+
+Creates a webhook middleware for payout status updates.
+
+```typescript
+interface PayoutWebhookCallbacks {
+  onCreating?: (payload: PayoutWebhookPayload) => void | Promise<void>;
+  onWaiting?: (payload: PayoutWebhookPayload) => void | Promise<void>;
+  onProcessing?: (payload: PayoutWebhookPayload) => void | Promise<void>;
+  onSending?: (payload: PayoutWebhookPayload) => void | Promise<void>;
+  onFinished?: (payload: PayoutWebhookPayload) => void | Promise<void>;
+  onFailed?: (payload: PayoutWebhookPayload) => void | Promise<void>;
+  onRejected?: (payload: PayoutWebhookPayload) => void | Promise<void>;
+}
+
+// Usage
+app.post('/webhook/payout',
+  NowPaymentsMiddleware.payoutWebhook({
+    onFinished: async (payload) => {
+      console.log('Payout completed:', payload.id);
+    },
+    onFailed: async (payload) => {
+      console.log('Payout failed:', payload.id);
+    },
+  })
+);
+```
+
+## Types and Interfaces
+
+### Payment Request Types
+
+```typescript
+interface CreatePaymentRequest {
+  price_amount: number;
+  price_currency: string;
+  pay_currency: string;
+  order_id?: string;
+  order_description?: string;
+  customer_email?: string;
+  ipn_callback_url?: string;
+}
+
+interface CreatePaymentByInvoiceRequest {
+  iid: string;
+  pay_currency: string;
+  order_id?: string;
+  order_description?: string;
+  customer_email?: string;
+  ipn_callback_url?: string;
+}
+
+interface CreatePayoutRequest {
+  withdrawals: Array<{
+    address: string;
+    currency: string;
+    amount: number;
+    ipn_callback_url?: string;
+  }>;
+}
+```
+
+### Response Types
+
+```typescript
+interface CreatePaymentResponse {
+  payment_id: string;
+  payment_status: PaymentStatus;
+  pay_address: string;
+  pay_amount: number;
+  pay_currency: string;
+  order_id?: string;
+  expiration_estimate_date: string;
+  network?: string;
+}
+
+interface CreatePayoutResponse {
+  id: string;
+  withdrawals: Array<{
+    id: string;
+    status: PayoutStatus;
+    address: string;
+    amount: number;
+    currency: string;
+  }>;
+}
+```
+
+### Webhook Payload Types
+
+```typescript
+interface PaymentWebhookPayload {
+  payment_id: number;
+  payment_status: PaymentStatus;
+  pay_address: string;
+  pay_amount: number;
+  pay_currency: string;
+  actually_paid: number;
+  order_id?: string;
+  outcome_amount: number;
+  outcome_currency: string;
+}
+
+interface PayoutWebhookPayload {
+  id: string;
+  batch_withdrawal_id: string;
+  status: PayoutStatus;
+  address: string;
+  amount: number;
+  currency: string;
+  hash?: string;
+  error?: string;
+}
+```
+
+## Enums
+
+### Payment Status
+
+```typescript
+enum PaymentStatus {
+  WAITING = 'waiting',           // Waiting for customer payment
+  CONFIRMING = 'confirming',     // Transaction confirming on blockchain
+  CONFIRMED = 'confirmed',       // Transaction confirmed
+  SENDING = 'sending',          // Sending to your wallet
+  PARTIALLY_PAID = 'partially_paid', // Customer sent less than required
+  FINISHED = 'finished',         // Payment completed
+  FAILED = 'failed',            // Payment failed
+  EXPIRED = 'expired',          // Payment expired (7 days)
+  REFUNDED = 'refunded',        // Payment refunded
+}
+```
+
+### Payout Status
+
+```typescript
+enum PayoutStatus {
+  CREATING = 'creating',         // Payout being created
+  WAITING = 'waiting',          // Waiting to be processed
+  PROCESSING = 'processing',     // Being processed
+  SENDING = 'sending',          // Being sent to address
+  FINISHED = 'finished',        // Payout completed
+  FAILED = 'failed',            // Payout failed
+  REJECTED = 'rejected',        // Payout rejected
+}
+```
+
+## Error Types
+
+```typescript
+class NowPaymentsError extends Error {
+  code: string;
+  statusCode?: number;
+  
+  constructor(message: string, code: string, statusCode?: number) {
+    super(message);
+    this.code = code;
+    this.statusCode = statusCode;
+  }
+}
+
+class NowPaymentsApiError extends NowPaymentsError {
+  constructor(message: string, statusCode: number) {
+    super(message, 'API_ERROR', statusCode);
+  }
+}
+
+class NowPaymentsConfigError extends NowPaymentsError {
+  constructor(message: string) {
+    super(message, 'CONFIG_ERROR');
+  }
+}
+
+class NowPaymentsValidationError extends NowPaymentsError {
+  constructor(message: string) {
+    super(message, 'VALIDATION_ERROR', 400);
+  }
+}
+
+class NowPaymentsNetworkError extends NowPaymentsError {
+  constructor(message: string) {
+    super(message, 'NETWORK_ERROR', 503);
+  }
+}
+```
+
+## Configuration
+
+```typescript
+interface NowPaymentsConfig {
+  apiKey: string;                    // Required: Your NowPayments API key
+  bearerToken?: string;              // Optional: Bearer token for payouts
+  baseURL?: string;                  // Optional: API base URL (default: https://api.nowpayments.io/v1)
+  errorHandling?: 'next' | 'direct'; // Optional: Error handling mode (default: 'next')
+}
+
+// Configuration method
+NowPaymentsMiddleware.configure(config: NowPaymentsConfig): void
+```
