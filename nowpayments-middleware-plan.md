@@ -353,3 +353,27 @@ function CreatePaymentWebhookMiddleware({
   }
 }
 ```
+
+
+## Bearer token
+
+El bearer token se solicita la momento de necesitarlo.
+
+Request:
+
+```shell 
+curl --location 'https://api.nowpayments.io/v1/auth' \
+--header 'Content-Type: application/json' \
+--data '{
+    "email": "your_email",
+    "password": "your_password" 
+}'
+```
+
+Response:
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjU4MjYyNTkxMTUiLCJpYXQiOjE2MDUyODgzODQsImV4cCI6MTYwNTI4ODY4NH0.bk8B5AjoTt8Qfm1zHJxutAtgaTGW-2j67waGQ2DUHUI"
+}
+```

@@ -11,8 +11,8 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
-    "build:watch": "tsc -p tsconfig.build.json --watch",
+    "build": "node init && tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
+    "build:watch": "node init && tsc -p tsconfig.build.json --watch",
     "clean": "rm -rf dist",
     "prebuild": "npm run clean",
     "prepublishOnly": "npm run test && npm run build",
