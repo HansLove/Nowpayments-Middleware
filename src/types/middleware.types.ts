@@ -14,7 +14,8 @@ export type ErrorHandlingMode = 'next' | 'direct';
 
 export interface NowPaymentsConfig {
   apiKey: string;
-  bearerToken?: string;
+  email?: string;
+  password?: string;
   baseURL?: string;
   errorHandling?: ErrorHandlingMode;
 }

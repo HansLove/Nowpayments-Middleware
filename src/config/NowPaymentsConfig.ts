@@ -25,7 +25,8 @@ class NowPaymentsConfigSingleton {
     if (!this.config) {
       this.config = {
         apiKey: process.env.NOWPAYMENTS_API_KEY || '',
-        bearerToken: process.env.NOWPAYMENTS_BEARER_TOKEN,
+        email: process.env.NOWPAYMENTS_EMAIL,
+        password: process.env.NOWPAYMENTS_PASSWORD,
         baseURL: process.env.NOWPAYMENTS_BASE_URL || 'https://api.nowpayments.io/v1',
         errorHandling: 'next',
       };
