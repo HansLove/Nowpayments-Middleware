@@ -1,6 +1,6 @@
 {
   "name": "@taloon/nowpayments-middleware",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Express middleware for NowPayments integration with dependency injection",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
