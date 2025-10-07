@@ -7,7 +7,8 @@ app.use(express.json());
 
 NowPaymentsMiddleware.configure({
   apiKey: 'your-api-key-here',
-  bearerToken: 'your-bearer-token-here',
+  email: 'your-email@example.com',
+  password: 'your-password',
   errorHandling: 'next',
 });
 

@@ -316,7 +316,8 @@ class NowPaymentsNetworkError extends NowPaymentsError {
 ```typescript
 interface NowPaymentsConfig {
   apiKey: string;                    // Required: Your NowPayments API key
-  bearerToken?: string;              // Optional: Bearer token for payouts
+  email?: string;                    // Optional: Email for authentication (required for payouts)
+  password?: string;                 // Optional: Password for authentication (required for payouts)
   baseURL?: string;                  // Optional: API base URL (default: https://api.nowpayments.io/v1)
   errorHandling?: 'next' | 'direct'; // Optional: Error handling mode (default: 'next')
 }

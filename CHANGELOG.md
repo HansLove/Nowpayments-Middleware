@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-10-07
+
+### Added
+- Bearer token authentication support for NowPayments API
+- Email and password configuration options for automatic token retrieval
+- AuthManager singleton for token caching and automatic refresh (4-minute cache)
+- `@RequiresAuth` decorator for methods requiring authentication (e.g., payouts)
+- Automated NPM publishing commands (`publish:patch`, `publish:minor`, `publish:major`)
+
+### Changed
+- Configuration now supports `email` and `password` instead of direct `bearerToken`
+- Authentication tokens are now automatically managed and refreshed
+- Updated documentation to reflect email/password authentication flow
+- Improved MDX documentation with Context7 integration preparation
+
+### Fixed
+- Corrected documentation to use `email` and `password` configuration instead of incorrect `bearerToken` references
+
 ## [1.0.1] - 2025-01-15
 
 ### Changed

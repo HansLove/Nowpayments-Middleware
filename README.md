@@ -28,7 +28,8 @@ import { NowPaymentsMiddleware } from '@taloon/nowpayments-middleware';
 // Configure globally
 NowPaymentsMiddleware.configure({
   apiKey: 'your-nowpayments-api-key',
-  bearerToken: 'your-bearer-token', // Optional, required for payouts
+  email: 'your-email@example.com', // Optional, required for payouts
+  password: 'your-password', // Optional, required for payouts
   errorHandling: 'next', // or 'direct'
 });
 ```
@@ -94,7 +95,8 @@ You can use environment variables instead of explicit configuration:
 
 ```bash
 NOWPAYMENTS_API_KEY=your-api-key
-NOWPAYMENTS_BEARER_TOKEN=your-bearer-token
+NOWPAYMENTS_EMAIL=your-email@example.com
+NOWPAYMENTS_PASSWORD=your-password
 NOWPAYMENTS_BASE_URL=https://api.nowpayments.io/v1
 ```
 
@@ -103,7 +105,8 @@ NOWPAYMENTS_BASE_URL=https://api.nowpayments.io/v1
 ```typescript
 interface NowPaymentsConfig {
   apiKey: string;                    // Required: Your NowPayments API key
-  bearerToken?: string;              // Optional: Bearer token for payouts
+  email?: string;                    // Optional: Email for authentication (required for payouts)
+  password?: string;                 // Optional: Password for authentication (required for payouts)
   baseURL?: string;                  // Optional: API base URL (default: https://api.nowpayments.io/v1)
   errorHandling?: 'next' | 'direct'; // Optional: Error handling mode (default: 'next')
 }
@@ -261,7 +264,8 @@ app.use(express.json());
 // Configuration
 NowPaymentsMiddleware.configure({
   apiKey: process.env.NOWPAYMENTS_API_KEY!,
-  bearerToken: process.env.NOWPAYMENTS_BEARER_TOKEN,
+  email: process.env.NOWPAYMENTS_EMAIL,
+  password: process.env.NOWPAYMENTS_PASSWORD,
   errorHandling: 'next',
 });
 

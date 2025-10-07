@@ -16,7 +16,8 @@ import { NowPaymentsMiddleware } from '@taloon/nowpayments-middleware';
 // Configure globally
 NowPaymentsMiddleware.configure({
   apiKey: 'your-nowpayments-api-key',
-  bearerToken: 'your-bearer-token', // Optional, required for payouts
+  email: 'your-email@example.com', // Optional, required for payouts
+  password: 'your-password', // Optional, required for payouts
   errorHandling: 'next', // or 'direct'
 });
 ```
@@ -25,7 +26,8 @@ NowPaymentsMiddleware.configure({
 
 ```bash
 NOWPAYMENTS_API_KEY=your-api-key
-NOWPAYMENTS_BEARER_TOKEN=your-bearer-token
+NOWPAYMENTS_EMAIL=your-email@example.com
+NOWPAYMENTS_PASSWORD=your-password
 NOWPAYMENTS_BASE_URL=https://api.nowpayments.io/v1
 ```
 
