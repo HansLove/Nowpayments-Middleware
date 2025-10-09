@@ -12,6 +12,8 @@ import {
   CreatePaymentByInvoiceResponse,
   CreatePayoutRequest,
   CreatePayoutResponse,
+  VerifyPayoutRequest,
+  VerifyPayoutResponse,
 } from '@/types';
 import { RequiresAuth } from '@/decorators/RequiresAuth';
 
@@ -82,6 +84,19 @@ export class NowPaymentsClient {
     const response = await this.axiosInstance.post<CreatePayoutResponse>(
       '/payout',
       data
+    );
+    return response.data;
+  }
+
+  @RequiresAuth
+  async verifyPayout(batchId: string, verificationCode: string): Promise<VerifyPayoutResponse> {
+    const requestData: VerifyPayoutRequest = {
+      verification_code: verificationCode,
+    };
+
+    const response = await this.axiosInstance.post<VerifyPayoutResponse>(
+      `/payout/${batchId}/verify`,
+      requestData
     );
     return response.data;
   }

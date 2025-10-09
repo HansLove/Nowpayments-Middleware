@@ -3,6 +3,8 @@ import { NowPaymentsClient } from '@/client/NowPaymentsClient';
 import { BaseMiddleware } from '@/middlewares/base/BaseMiddleware';
 import { CreatePayoutMiddlewareOptions, ExpressMiddleware } from '@/types';
 import { NowPaymentsValidationError } from '@/utils/errors';
+import { NowPaymentsConfiguration } from '@/config/NowPaymentsConfig';
+import { generateTOTPCode } from '@/utils/totp';
 
 class CreatePayoutMiddleware extends BaseMiddleware {
   private client: NowPaymentsClient;
@@ -32,6 +34,13 @@ class CreatePayoutMiddleware extends BaseMiddleware {
         }
 
         const response = await this.client.createPayout(payoutData);
+
+        const config = NowPaymentsConfiguration.getConfig();
+
+        if (config.twoFactorSecretKey) {
+          const totpCode = generateTOTPCode(config.twoFactorSecretKey);
+          await this.client.verifyPayout(response.id, totpCode);
+        }
 
         const transformedResponse = options.transformResponse
           ? options.transformResponse(response)

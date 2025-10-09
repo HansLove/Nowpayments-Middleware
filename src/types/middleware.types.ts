@@ -16,6 +16,7 @@ export interface NowPaymentsConfig {
   apiKey: string;
   email?: string;
   password?: string;
+  twoFactorSecretKey?: string;
   baseURL?: string;
   errorHandling?: ErrorHandlingMode;
 }

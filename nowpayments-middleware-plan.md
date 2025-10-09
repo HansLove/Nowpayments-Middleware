@@ -377,3 +377,43 @@ Response:
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjU4MjYyNTkxMTUiLCJpYXQiOjE2MDUyODgzODQsImV4cCI6MTYwNTI4ODY4NH0.bk8B5AjoTt8Qfm1zHJxutAtgaTGW-2j67waGQ2DUHUI"
 }
 ```
+
+### Verificar payouts
+
+Es un paso adicional a hacer después de crear el payout.
+En @src/middlewares/createPayout.ts, después de crearlo se va a verificar inmediatamente.
+
+Request:
+
+```shell
+curl --location 'https://api.nowpayments.io/v1/payout/<id-lote-payout>/verify' \
+--header 'Authorization: Bearer {{token}}' \
+--header 'x-api-key: {{api-key}}' \
+--header 'Content-Type: application/json' \
+--data '{
+  "verification_code": "123456"
+}'
+```
+
+<id-lote-payout> Es el campo `id` de la respuesta al crear un payout.
+
+El verification code es un código TOTP, nowpayments recomienda usar una biblioteca 
+generadora de estos códigos como Speakeasy.
+
+Y tienen este snippet de código correspondiente:
+
+```javascript
+const TwoFaVerificationCode = speakeasy.totp({
+      your_2fa_secret_key,
+      encoding: 'base32',
+})
+```
+
+Respuesta: Código 200
+
+Creo que responde solo con un string 'OK', por lo señalado en su documentación. 
+Para evaluar el éxito basate en el código de respuesta.
+
+#### Notas
+
+El secret key del 2fa tendrá que ser pasado en la configuración global.

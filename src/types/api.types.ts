@@ -87,6 +87,12 @@ export interface CreatePayoutResponse {
   withdrawals: PayoutWithdrawalResponse[];
 }
 
+export interface VerifyPayoutRequest {
+  verification_code: string;
+}
+
+export type VerifyPayoutResponse = string;
+
 export interface PaymentWebhookPayload {
   payment_id: number;
   parent_payment_id?: number;

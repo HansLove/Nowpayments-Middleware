@@ -27,6 +27,7 @@ class NowPaymentsConfigSingleton {
         apiKey: process.env.NOWPAYMENTS_API_KEY || '',
         email: process.env.NOWPAYMENTS_EMAIL,
         password: process.env.NOWPAYMENTS_PASSWORD,
+        twoFactorSecretKey: process.env.NOWPAYMENTS_2FA_SECRET,
         baseURL: process.env.NOWPAYMENTS_BASE_URL || 'https://api.nowpayments.io/v1',
         errorHandling: 'next',
       };

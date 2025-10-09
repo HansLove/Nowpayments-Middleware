@@ -97,6 +97,7 @@ You can use environment variables instead of explicit configuration:
 NOWPAYMENTS_API_KEY=your-api-key
 NOWPAYMENTS_EMAIL=your-email@example.com
 NOWPAYMENTS_PASSWORD=your-password
+NOWPAYMENTS_2FA_SECRET=your-base32-encoded-2fa-secret
 NOWPAYMENTS_BASE_URL=https://api.nowpayments.io/v1
 ```
 
@@ -107,6 +108,7 @@ interface NowPaymentsConfig {
   apiKey: string;                    // Required: Your NowPayments API key
   email?: string;                    // Optional: Email for authentication (required for payouts)
   password?: string;                 // Optional: Password for authentication (required for payouts)
+  twoFactorSecretKey?: string;       // Optional: Base32-encoded 2FA secret for automatic payout verification
   baseURL?: string;                  // Optional: API base URL (default: https://api.nowpayments.io/v1)
   errorHandling?: 'next' | 'direct'; // Optional: Error handling mode (default: 'next')
 }
@@ -147,6 +149,34 @@ interface CreatePayoutMiddlewareOptions {
   mapRequest: (req: Request) => CreatePayoutRequest;
   transformResponse?: (response: CreatePayoutResponse) => unknown;
 }
+```
+
+**Automatic Payout Verification:**
+
+When `twoFactorSecretKey` is configured, the middleware automatically verifies payouts after creation using TOTP (Time-based One-Time Password) codes. This eliminates the need for manual verification steps.
+
+```typescript
+// Configure with 2FA secret
+NowPaymentsMiddleware.configure({
+  apiKey: 'your-api-key',
+  email: 'your-email@example.com',
+  password: 'your-password',
+  twoFactorSecretKey: 'YOUR_BASE32_ENCODED_2FA_SECRET', // Enables automatic verification
+});
+
+// Payouts will now be automatically verified
+app.post('/create-payout',
+  NowPaymentsMiddleware.createPayout({
+    mapRequest: (req) => ({
+      withdrawals: req.body.withdrawals,
+      ipn_callback_url: 'https://your-domain.com/webhook/payout',
+    }),
+  }),
+  (req, res) => {
+    const payout = res.locals.nowPaymentsResponse;
+    res.json({ success: true, payout }); // Payout is already verified
+  }
+);
 ```
 
 #### `paymentWebhook(callbacks)`
@@ -358,6 +388,7 @@ Check out the `/examples` directory for more comprehensive examples:
 - ✅ **Create Payment** (`POST /v1/payment`)
 - ✅ **Create Payment by Invoice** (`POST /v1/invoice-payment`)
 - ✅ **Create Payout** (`POST /v1/payout`)
+- ✅ **Verify Payout** (`POST /v1/payout/{id}/verify`)
 - ✅ **Payment Webhooks** (IPN callbacks)
 - ✅ **Payout Webhooks** (IPN callbacks)
 
@@ -366,7 +397,8 @@ Check out the `/examples` directory for more comprehensive examples:
 - Node.js >= 18.18.0
 - Express.js >= 4.17.0
 - Valid NowPayments API key
-- Bearer token (required for payouts)
+- Bearer token credentials (email/password - required for payouts)
+- 2FA secret key (optional - for automatic payout verification)
 
 ## Testing
 
