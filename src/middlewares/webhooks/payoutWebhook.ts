@@ -8,7 +8,7 @@ class PayoutWebhookMiddleware extends BaseMiddleware {
     return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
       try {
         const payload: PayoutWebhookPayload = req.body;
-        const status = payload.status;
+        const status = payload.status.toLocaleLowerCase();
 
         switch (status) {
           case PayoutStatus.CREATING:

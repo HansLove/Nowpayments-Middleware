@@ -8,7 +8,7 @@ class PaymentWebhookMiddleware extends BaseMiddleware {
     return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
       try {
         const payload: PaymentWebhookPayload = req.body;
-        const status = payload.payment_status;
+        const status = payload.payment_status.toLocaleLowerCase();
 
         switch (status) {
           case PaymentStatus.WAITING:
