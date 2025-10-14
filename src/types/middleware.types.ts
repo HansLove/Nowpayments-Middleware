@@ -12,6 +12,13 @@ import {
 
 export type ErrorHandlingMode = 'next' | 'direct';
 
+export type ErrorHandler = (
+  error: unknown,
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => void | Promise<void>;
+
 export interface NowPaymentsConfig {
   apiKey: string;
   email?: string;
@@ -19,6 +26,7 @@ export interface NowPaymentsConfig {
   twoFactorSecretKey?: string;
   baseURL?: string;
   errorHandling?: ErrorHandlingMode;
+  onError?: ErrorHandler;
 }
 
 export interface RequestMapper<T> {
@@ -32,16 +40,19 @@ export interface ResponseTransformer<T, U> {
 export interface CreatePaymentMiddlewareOptions {
   mapRequest: RequestMapper<CreatePaymentRequest>;
   transformResponse?: ResponseTransformer<CreatePaymentResponse, unknown>;
+  onError?: ErrorHandler;
 }
 
 export interface CreatePaymentByInvoiceMiddlewareOptions {
   mapRequest: RequestMapper<CreatePaymentByInvoiceRequest>;
   transformResponse?: ResponseTransformer<CreatePaymentByInvoiceResponse, unknown>;
+  onError?: ErrorHandler;
 }
 
 export interface CreatePayoutMiddlewareOptions {
   mapRequest: RequestMapper<CreatePayoutRequest>;
   transformResponse?: ResponseTransformer<CreatePayoutResponse, unknown>;
+  onError?: ErrorHandler;
 }
 
 export type AsyncCallback<T> = (payload: T) => void | Promise<void>;

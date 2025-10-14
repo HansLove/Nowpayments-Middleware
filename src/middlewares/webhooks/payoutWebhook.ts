@@ -58,10 +58,10 @@ class PayoutWebhookMiddleware extends BaseMiddleware {
         }
 
         this.saveToLocals(res, payload);
-        
+
         res.status(200).json({ status: 'ok' });
       } catch (error) {
-        this.handleError(error, res, next);
+        await this.handleError(error, req, res, next);
       }
     };
   }

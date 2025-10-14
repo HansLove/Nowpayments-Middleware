@@ -41,15 +41,225 @@ if (process.env.NODE_ENV === 'production') {
 }
 ```
 
+## Error Handling Configuration
+
+### Global Error Handler
+
+Configure a global error handler that applies to all middleware operations:
+
+```typescript
+import { NowPaymentsMiddleware, NowPaymentsError } from '@taloon/nowpayments-middleware';
+
+NowPaymentsMiddleware.configure({
+  apiKey: process.env.NOWPAYMENTS_API_KEY!,
+  email: process.env.NOWPAYMENTS_EMAIL,
+  password: process.env.NOWPAYMENTS_PASSWORD,
+  onError: async (error, req, res, next) => {
+    console.error('Payment error:', {
+      path: req.path,
+      method: req.method,
+      error: error instanceof Error ? error.message : 'Unknown',
+    });
+
+    if (error instanceof NowPaymentsError) {
+      return res.status(error.statusCode || 500).json({
+        success: false,
+        code: error.code,
+        message: 'Payment service error',
+      });
+    }
+
+    next(error);
+  },
+});
+```
+
+### Environment-Specific Error Handlers
+
+Different error handling strategies for development and production:
+
+```typescript
+const isDevelopment = process.env.NODE_ENV === 'development';
+
+NowPaymentsMiddleware.configure({
+  apiKey: process.env.NOWPAYMENTS_API_KEY!,
+  onError: async (error, req, res, next) => {
+    // Development: detailed errors
+    if (isDevelopment) {
+      console.error('Detailed error:', error);
+
+      if (error instanceof NowPaymentsError) {
+        return res.status(error.statusCode || 500).json({
+          success: false,
+          code: error.code,
+          message: error.message,
+          stack: error.stack, // Include stack trace in dev
+          originalError: error.originalError,
+        });
+      }
+    }
+
+    // Production: sanitized errors
+    if (error instanceof NowPaymentsError) {
+      return res.status(error.statusCode || 500).json({
+        success: false,
+        code: error.code,
+        message: 'Payment service error', // Generic message
+      });
+    }
+
+    next(error);
+  },
+});
+```
+
+### Global + Per-Middleware Handler
+
+Combine global handler with per-middleware overrides:
+
+```typescript
+// Global handler for common error handling
+NowPaymentsMiddleware.configure({
+  apiKey: process.env.NOWPAYMENTS_API_KEY!,
+  onError: async (error, req, res, next) => {
+    // Log all errors to monitoring service
+    monitoringService.logError(error, { path: req.path });
+
+    if (error instanceof NowPaymentsError) {
+      return res.status(error.statusCode || 500).json({
+        success: false,
+        message: 'Payment operation failed',
+      });
+    }
+
+    next(error);
+  },
+});
+
+// Per-middleware override for specific needs
+app.post('/critical-payment',
+  NowPaymentsMiddleware.createPayment({
+    mapRequest: (req) => ({ /* ... */ }),
+    // Override global handler for critical payments
+    onError: async (error, req, res, next) => {
+      // Alert on critical payment failures
+      await alertService.notifyTeam('Critical payment failed', error);
+
+      return res.status(500).json({
+        success: false,
+        message: 'Critical payment failed - team notified',
+      });
+    },
+  })
+);
+```
+
+### Error Handler with Monitoring Integration
+
+```typescript
+import * as Sentry from '@sentry/node';
+import pino from 'pino';
+
+const logger = pino();
+
+NowPaymentsMiddleware.configure({
+  apiKey: process.env.NOWPAYMENTS_API_KEY!,
+  onError: async (error, req, res, next) => {
+    // Log to structured logger
+    logger.error({
+      err: error,
+      req: {
+        method: req.method,
+        url: req.url,
+        headers: req.headers,
+      },
+    }, 'NowPayments error occurred');
+
+    // Report to Sentry with context
+    if (error instanceof NowPaymentsError) {
+      Sentry.captureException(error, {
+        tags: {
+          source: 'nowpayments-middleware',
+          errorCode: error.code,
+        },
+        contexts: {
+          payment: {
+            path: req.path,
+            method: req.method,
+            statusCode: error.statusCode,
+          },
+        },
+      });
+
+      return res.status(error.statusCode || 500).json({
+        success: false,
+        code: error.code,
+        message: process.env.NODE_ENV === 'production'
+          ? 'Payment service error'
+          : error.message,
+      });
+    }
+
+    // Non-NowPayments errors: pass to Express
+    next(error);
+  },
+});
+```
+
+### Error Handler with Retry Logic
+
+```typescript
+NowPaymentsMiddleware.configure({
+  apiKey: process.env.NOWPAYMENTS_API_KEY!,
+  onError: async (error, req, res, next) => {
+    if (error instanceof NowPaymentsNetworkError) {
+      // Network errors might be transient
+      const retryCount = (req.headers['x-retry-count'] as string) || '0';
+      const count = parseInt(retryCount, 10);
+
+      if (count < 3) {
+        // Suggest retry to client
+        return res.status(503).json({
+          success: false,
+          code: 'NETWORK_ERROR',
+          message: 'Service temporarily unavailable',
+          retryable: true,
+          retryAfter: Math.pow(2, count) * 1000, // Exponential backoff
+        });
+      }
+    }
+
+    if (error instanceof NowPaymentsError) {
+      return res.status(error.statusCode || 500).json({
+        success: false,
+        code: error.code,
+        message: 'Payment operation failed',
+        retryable: false,
+      });
+    }
+
+    next(error);
+  },
+});
+```
+
 ## Configuration Interface
 
 ```typescript
+type ErrorHandler = (
+  error: unknown,
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+) => void | Promise<void>;
+
 interface NowPaymentsConfig {
   apiKey: string;                    // Required: Your NowPayments API key
   email?: string;                    // Optional: Email for authentication (required for payouts)
   password?: string;                 // Optional: Password for authentication (required for payouts)
   baseURL?: string;                  // Optional: API base URL
-  errorHandling?: 'next' | 'direct'; // Optional: Error handling mode
+  errorHandling?: 'next' | 'direct'; // Optional: Legacy error handling mode (fallback)
+  onError?: ErrorHandler;            // Optional: Global error handler (takes priority over errorHandling)
 }
 ```
 

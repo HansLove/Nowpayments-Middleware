@@ -49,7 +49,7 @@ class CreatePayoutMiddleware extends BaseMiddleware {
         this.saveToLocals(res, transformedResponse);
         next();
       } catch (error) {
-        this.handleError(error, res, next);
+        await this.handleError(error, req, res, next, options.onError);
       }
     };
   }

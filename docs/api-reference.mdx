@@ -12,6 +12,7 @@ Creates a payment middleware for standard payments.
 interface CreatePaymentMiddlewareOptions {
   mapRequest: (req: Request) => CreatePaymentRequest;
   transformResponse?: (response: CreatePaymentResponse) => unknown;
+  onError?: ErrorHandler;
 }
 
 // Usage
@@ -46,6 +47,7 @@ Creates a payment middleware for invoice-based payments.
 interface CreatePaymentByInvoiceMiddlewareOptions {
   mapRequest: (req: Request) => CreatePaymentByInvoiceRequest;
   transformResponse?: (response: CreatePaymentByInvoiceResponse) => unknown;
+  onError?: ErrorHandler;
 }
 
 // Usage
@@ -73,6 +75,7 @@ Creates a payout middleware for withdrawals.
 interface CreatePayoutMiddlewareOptions {
   mapRequest: (req: Request) => CreatePayoutRequest;
   transformResponse?: (response: CreatePayoutResponse) => unknown;
+  onError?: ErrorHandler;
 }
 
 // Usage
@@ -311,6 +314,65 @@ class NowPaymentsNetworkError extends NowPaymentsError {
 }
 ```
 
+## Error Handling Types
+
+### `ErrorHandler`
+
+Type for custom error handling callbacks.
+
+```typescript
+type ErrorHandler = (
+  error: unknown,
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+) => void | Promise<void>;
+```
+
+**Parameters:**
+- `error`: The error that occurred (can be NowPaymentsError or any other error type)
+- `req`: Express request object
+- `res`: Express response object
+- `next`: Express next function to pass error to the next middleware
+
+**Usage:**
+
+Per-middleware error handler:
+```typescript
+app.post('/payment',
+  NowPaymentsMiddleware.createPayment({
+    mapRequest: (req) => ({ /* ... */ }),
+    onError: async (error, req, res, next) => {
+      console.error('Payment error:', error);
+
+      if (error instanceof NowPaymentsApiError) {
+        return res.status(503).json({
+          error: 'Payment service unavailable'
+        });
+      }
+
+      res.status(500).json({ error: 'Payment failed' });
+    },
+  })
+);
+```
+
+Global error handler:
+```typescript
+NowPaymentsMiddleware.configure({
+  apiKey: 'your-api-key',
+  onError: async (error, req, res, next) => {
+    // Handle all NowPayments errors globally
+    if (error instanceof NowPaymentsError) {
+      return res.status(error.statusCode || 500).json({
+        error: error.message
+      });
+    }
+    next(error);
+  },
+});
+```
+
 ## Configuration
 
 ```typescript
@@ -319,9 +381,15 @@ interface NowPaymentsConfig {
   email?: string;                    // Optional: Email for authentication (required for payouts)
   password?: string;                 // Optional: Password for authentication (required for payouts)
   baseURL?: string;                  // Optional: API base URL (default: https://api.nowpayments.io/v1)
-  errorHandling?: 'next' | 'direct'; // Optional: Error handling mode (default: 'next')
+  errorHandling?: 'next' | 'direct'; // Optional: Legacy error handling mode (default: 'next')
+  onError?: ErrorHandler;            // Optional: Global error handler (takes priority over errorHandling)
 }
 
 // Configuration method
 NowPaymentsMiddleware.configure(config: NowPaymentsConfig): void
 ```
+
+**Error Handling Priority:**
+1. Per-middleware `onError` handler (highest priority)
+2. Global `onError` in configuration
+3. Legacy `errorHandling` mode ('next' | 'direct')

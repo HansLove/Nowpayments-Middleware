@@ -1,9 +1,10 @@
 import express from 'express';
-import { 
-  NowPaymentsMiddleware, 
+import {
+  NowPaymentsMiddleware,
   PaymentStatus,
   PayoutStatus,
-  NowPaymentsError 
+  NowPaymentsError,
+  NowPaymentsValidationError
 } from '@taloon/nowpayments-middleware';
 
 const app = express();
@@ -16,6 +17,27 @@ NowPaymentsMiddleware.configure({
   password: process.env.NOWPAYMENTS_PASSWORD,
   baseURL: process.env.NOWPAYMENTS_BASE_URL,
   errorHandling: 'next',
+  onError: async (error, req, res, next) => {
+    console.error('Global NowPayments error handler:', {
+      path: req.path,
+      method: req.method,
+      error: error instanceof Error ? error.message : 'Unknown',
+    });
+
+    if (error instanceof NowPaymentsError) {
+      return res.status(error.statusCode || 500).json({
+        success: false,
+        error: {
+          code: error.code,
+          message: process.env.NODE_ENV === 'production'
+            ? 'Payment service error'
+            : error.message,
+        },
+      });
+    }
+
+    next(error);
+  },
 });
 
 interface Order {
@@ -116,7 +138,7 @@ app.post('/payouts',
         withdrawals: response.withdrawals,
         createdAt: new Date().toISOString(),
       });
-      
+
       return {
         payoutId: response.id,
         withdrawals: response.withdrawals.map(w => ({
@@ -128,10 +150,39 @@ app.post('/payouts',
         })),
       };
     },
+    onError: async (error, req, res, next) => {
+      // Per-middleware handler overrides global handler
+      console.error('Payout-specific error handler:', error);
+
+      if (error instanceof NowPaymentsValidationError) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'PAYOUT_VALIDATION_ERROR',
+            message: 'Invalid payout data: ' + error.message,
+          },
+        });
+      }
+
+      if (error instanceof NowPaymentsError) {
+        return res.status(error.statusCode || 500).json({
+          success: false,
+          error: {
+            code: 'PAYOUT_ERROR',
+            message: 'Failed to create payout',
+          },
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        error: 'Unexpected payout error',
+      });
+    },
   }),
   (req, res) => {
     const payout = res.locals.nowPaymentsResponse;
-    
+
     res.status(200).json({
       success: true,
       message: 'Payout created successfully',

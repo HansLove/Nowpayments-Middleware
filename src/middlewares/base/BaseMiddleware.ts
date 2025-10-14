@@ -1,11 +1,30 @@
-import { Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { NowPaymentsConfiguration } from '@/config/NowPaymentsConfig';
 import { NowPaymentsError } from '@/utils/errors';
-import { ErrorHandlingMode } from '@/types';
+import { ErrorHandlingMode, ErrorHandler } from '@/types';
 
 export abstract class BaseMiddleware {
-  protected handleError(error: unknown, res: Response, next: NextFunction): void {
+  protected async handleError(
+    error: unknown,
+    req: Request,
+    res: Response,
+    next: NextFunction,
+    onError?: ErrorHandler
+  ): Promise<void> {
+    // Priority 1: Per-middleware error handler
+    if (onError) {
+      await onError(error, req, res, next);
+      return;
+    }
+
+    // Priority 2: Global error handler
     const config = NowPaymentsConfiguration.getConfig();
+    if (config.onError) {
+      await config.onError(error, req, res, next);
+      return;
+    }
+
+    // Priority 3: Legacy errorHandling mode (fallback)
     const errorHandling: ErrorHandlingMode = config.errorHandling || 'next';
 
     if (errorHandling === 'direct') {

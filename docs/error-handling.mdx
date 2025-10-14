@@ -16,6 +16,193 @@ import {
 } from '@taloon/nowpayments-middleware';
 ```
 
+## Callback-Based Error Handling
+
+The middleware provides flexible error handling through callbacks that give you complete control over error responses. You can configure error handlers at three levels with a clear priority system:
+
+1. **Per-middleware `onError` handler** (highest priority)
+2. **Global `onError` in configuration** (medium priority)
+3. **Legacy `errorHandling` mode** ('next' | 'direct', lowest priority - fallback)
+
+### ErrorHandler Type
+
+```typescript
+type ErrorHandler = (
+  error: unknown,
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+) => void | Promise<void>;
+```
+
+### Per-Middleware Error Handler
+
+Handle errors for specific endpoints with custom logic:
+
+```typescript
+app.post('/create-payment',
+  NowPaymentsMiddleware.createPayment({
+    mapRequest: (req) => ({
+      price_amount: req.body.amount,
+      price_currency: req.body.currency,
+      pay_currency: req.body.cryptoCurrency,
+    }),
+    onError: async (error, req, res, next) => {
+      console.error('Payment creation error:', error);
+
+      if (error instanceof NowPaymentsApiError) {
+        return res.status(503).json({
+          success: false,
+          error: 'Payment service temporarily unavailable. Please try again.',
+        });
+      }
+
+      if (error instanceof NowPaymentsValidationError) {
+        return res.status(400).json({
+          success: false,
+          error: error.message,
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        error: 'Payment creation failed',
+      });
+    },
+  }),
+  (req, res) => {
+    const payment = res.locals.nowPaymentsResponse;
+    res.status(201).json({ success: true, payment });
+  }
+);
+```
+
+### Global Error Handler
+
+Configure a global handler for all middleware operations:
+
+```typescript
+NowPaymentsMiddleware.configure({
+  apiKey: 'your-api-key',
+  onError: async (error, req, res, next) => {
+    // Log to monitoring service
+    console.error('NowPayments error:', {
+      path: req.path,
+      method: req.method,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+
+    if (error instanceof NowPaymentsError) {
+      return res.status(error.statusCode || 400).json({
+        success: false,
+        code: error.code,
+        message: 'Payment service error',
+      });
+    }
+
+    // Pass non-NowPayments errors to Express error handler
+    next(error);
+  },
+});
+```
+
+### Priority System Example
+
+Per-middleware handlers override global handlers:
+
+```typescript
+// Global handler (applies to all operations)
+NowPaymentsMiddleware.configure({
+  apiKey: 'your-api-key',
+  onError: async (error, req, res, next) => {
+    console.log('Global handler');
+    res.status(500).json({ error: 'Global error' });
+  },
+});
+
+// This uses the per-middleware handler (overrides global)
+app.post('/payments',
+  NowPaymentsMiddleware.createPayment({
+    mapRequest: (req) => ({ /* ... */ }),
+    onError: async (error, req, res, next) => {
+      console.log('Per-middleware handler (takes priority)');
+      res.status(500).json({ error: 'Payment-specific error' });
+    },
+  })
+);
+
+// This uses the global handler (no per-middleware override)
+app.post('/payouts',
+  NowPaymentsMiddleware.createPayout({
+    mapRequest: (req) => ({ /* ... */ }),
+    // No onError - falls back to global onError
+  })
+);
+```
+
+### Advanced: Conditional Error Passing
+
+You can choose to handle some errors and pass others to Express:
+
+```typescript
+NowPaymentsMiddleware.configure({
+  apiKey: 'your-api-key',
+  onError: async (error, req, res, next) => {
+    // Handle NowPayments-specific errors
+    if (error instanceof NowPaymentsError) {
+      console.error('NowPayments error:', error.code);
+      return res.status(error.statusCode || 500).json({
+        error: {
+          code: error.code,
+          message: 'Payment service error',
+        },
+      });
+    }
+
+    // Pass other errors to Express error handling middleware
+    next(error);
+  },
+});
+
+// Express error handler for non-NowPayments errors
+app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Express error handler:', error);
+  res.status(500).json({ error: 'Internal server error' });
+});
+```
+
+### Integration with Logging Services
+
+```typescript
+import * as Sentry from '@sentry/node';
+
+NowPaymentsMiddleware.configure({
+  apiKey: 'your-api-key',
+  onError: async (error, req, res, next) => {
+    // Report to Sentry
+    Sentry.captureException(error, {
+      tags: {
+        source: 'nowpayments-middleware',
+        path: req.path,
+      },
+    });
+
+    if (error instanceof NowPaymentsError) {
+      return res.status(error.statusCode || 500).json({
+        error: {
+          code: error.code,
+          message: process.env.NODE_ENV === 'production'
+            ? 'Payment service error'
+            : error.message,
+        },
+      });
+    }
+
+    next(error);
+  },
+});
+```
+
 ## Basic Error Handling
 
 ```typescript

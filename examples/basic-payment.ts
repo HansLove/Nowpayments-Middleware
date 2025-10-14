@@ -1,5 +1,9 @@
 import express from 'express';
-import { NowPaymentsMiddleware } from '@taloon/nowpayments-middleware';
+import {
+  NowPaymentsMiddleware,
+  NowPaymentsApiError,
+  NowPaymentsValidationError
+} from '@taloon/nowpayments-middleware';
 
 const app = express();
 
@@ -31,10 +35,41 @@ app.post('/create-payment',
       currency: response.pay_currency,
       expiresAt: response.expiration_estimate_date,
     }),
+    onError: async (error, req, res, next) => {
+      console.error('Payment creation error:', error);
+
+      if (error instanceof NowPaymentsValidationError) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: error.message,
+          },
+        });
+      }
+
+      if (error instanceof NowPaymentsApiError) {
+        return res.status(503).json({
+          success: false,
+          error: {
+            code: 'SERVICE_UNAVAILABLE',
+            message: 'Payment service is temporarily unavailable. Please try again later.',
+          },
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to create payment',
+        },
+      });
+    },
   }),
   (req, res) => {
     const payment = res.locals.nowPaymentsResponse;
-    
+
     res.status(201).json({
       success: true,
       payment,
