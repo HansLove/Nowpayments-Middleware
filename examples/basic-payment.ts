@@ -86,6 +86,7 @@ app.post('/create-payout',
         amount: withdrawal.amount,
         ipn_callback_url: 'https://your-domain.com/webhook/payout',
       })),
+      payout_description: req.body.description || 'standard_payout',
     }),
     transformResponse: (response) => ({
       payoutId: response.id,

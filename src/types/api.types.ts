@@ -58,6 +58,7 @@ export interface PayoutWithdrawal {
 
 export interface CreatePayoutRequest {
   ipn_callback_url?: string;
+  payout_description?: string;
   withdrawals: PayoutWithdrawal[];
 }
 

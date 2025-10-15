@@ -80,6 +80,8 @@ app.post('/create-invoice-payment',
 
 ## Payout Creation
 
+### Basic Payout
+
 ```typescript
 app.post('/create-payout',
   NowPaymentsMiddleware.createPayout({
@@ -104,7 +106,7 @@ app.post('/create-payout',
   }),
   (req, res) => {
     const payout = res.locals.nowPaymentsResponse;
-    
+
     res.status(200).json({
       success: true,
       payout,
@@ -112,6 +114,53 @@ app.post('/create-payout',
   }
 );
 ```
+
+### Payout with Description
+
+Use `payout_description` to categorize payouts for easier tracking and webhook routing:
+
+```typescript
+app.post('/create-payout',
+  NowPaymentsMiddleware.createPayout({
+    mapRequest: (req, res) => ({
+      withdrawals: req.body.withdrawals.map((withdrawal: any) => ({
+        address: withdrawal.address,
+        currency: withdrawal.currency,
+        amount: withdrawal.amount,
+      })),
+      // Describe the payout batch (e.g., "affiliate_commission", "refund_batch_001")
+      payout_description: req.body.description || 'standard_payout',
+      ipn_callback_url: 'https://your-domain.com/webhook/payout',
+    }),
+    transformResponse: (response) => ({
+      payoutId: response.id,
+      withdrawals: response.withdrawals.map(w => ({
+        id: w.id,
+        status: w.status,
+        address: w.address,
+        amount: w.amount,
+        currency: w.currency,
+        description: w.payout_description,
+      })),
+    }),
+  }),
+  (req, res) => {
+    const payout = res.locals.nowPaymentsResponse;
+
+    res.status(200).json({
+      success: true,
+      message: 'Payout created successfully',
+      payout,
+    });
+  }
+);
+```
+
+**Payout Description Examples:**
+- `affiliate_commission` - Affiliate commission payouts
+- `refund_batch_001` - Refund batches
+- `withdrawal_request_user_123` - User withdrawal requests
+- `settlement_monthly` - Monthly settlement batches
 
 ## Advanced Payment with Order Management
 

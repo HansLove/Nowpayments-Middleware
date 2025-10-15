@@ -187,6 +187,8 @@ interface CreatePayoutRequest {
     amount: number;
     ipn_callback_url?: string;
   }>;
+  ipn_callback_url?: string;
+  payout_description?: string; // Description for all payouts in the batch
 }
 ```
 

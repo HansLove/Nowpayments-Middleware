@@ -130,6 +130,7 @@ app.post('/payouts',
   NowPaymentsMiddleware.createPayout({
     mapRequest: (req, res) => ({
       withdrawals: req.body.withdrawals,
+      payout_description: req.body.description || 'standard_payout',
       ipn_callback_url: `${req.protocol}://${req.get('host')}/webhook/payout`,
     }),
     transformResponse: (response) => {

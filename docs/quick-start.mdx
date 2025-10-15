@@ -37,12 +37,29 @@ NowPaymentsMiddleware.configure({
 
 ## Environment Variables Setup
 
+You can configure the middleware using environment variables. All are optional except `NOWPAYMENTS_API_KEY`:
+
 ```bash
+# Required
 NOWPAYMENTS_API_KEY=your-api-key
+
+# Optional: Authentication for payouts
 NOWPAYMENTS_EMAIL=your-email@example.com
 NOWPAYMENTS_PASSWORD=your-password
+
+# Optional: 2FA for automatic payout verification
+NOWPAYMENTS_2FA_SECRET=your-base32-encoded-2fa-secret
+
+# Optional: Custom API base URL
 NOWPAYMENTS_BASE_URL=https://api.nowpayments.io/v1
 ```
+
+**Variable Reference:**
+- `NOWPAYMENTS_API_KEY` (required): API key from NowPayments dashboard
+- `NOWPAYMENTS_EMAIL` (optional): Email for payout authentication
+- `NOWPAYMENTS_PASSWORD` (optional): Password for payout authentication
+- `NOWPAYMENTS_2FA_SECRET` (optional): Base32-encoded 2FA secret key for automatic payout verification
+- `NOWPAYMENTS_BASE_URL` (optional): Custom API endpoint (default: `https://api.nowpayments.io/v1`)
 
 ## Simple Payment Creation
 

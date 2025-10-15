@@ -91,15 +91,30 @@ app.post('/webhook/payment',
 
 ### Environment Variables
 
-You can use environment variables instead of explicit configuration:
+You can use environment variables instead of explicit configuration. All environment variables are optional except `NOWPAYMENTS_API_KEY`:
 
 ```bash
+# Required
 NOWPAYMENTS_API_KEY=your-api-key
+
+# Optional: Authentication for payouts
 NOWPAYMENTS_EMAIL=your-email@example.com
 NOWPAYMENTS_PASSWORD=your-password
+
+# Optional: 2FA for automatic payout verification
 NOWPAYMENTS_2FA_SECRET=your-base32-encoded-2fa-secret
+
+# Optional: Custom API base URL
 NOWPAYMENTS_BASE_URL=https://api.nowpayments.io/v1
 ```
+
+**Environment Variable Reference:**
+
+- `NOWPAYMENTS_API_KEY` (required): Your NowPayments API key from the dashboard
+- `NOWPAYMENTS_EMAIL` (optional): Email address for authentication when creating/verifying payouts
+- `NOWPAYMENTS_PASSWORD` (optional): Password for authentication when creating/verifying payouts
+- `NOWPAYMENTS_2FA_SECRET` (optional): Base32-encoded 2FA secret key for automatic payout verification
+- `NOWPAYMENTS_BASE_URL` (optional): Custom API endpoint URL (default: `https://api.nowpayments.io/v1`)
 
 ### Configuration Options
 
@@ -110,8 +125,16 @@ interface NowPaymentsConfig {
   password?: string;                 // Optional: Password for authentication (required for payouts)
   twoFactorSecretKey?: string;       // Optional: Base32-encoded 2FA secret for automatic payout verification
   baseURL?: string;                  // Optional: API base URL (default: https://api.nowpayments.io/v1)
-  errorHandling?: 'next' | 'direct'; // Optional: Error handling mode (default: 'next')
+  errorHandling?: 'next' | 'direct'; // Optional: Legacy error handling mode (default: 'next')
+  onError?: ErrorHandler;            // Optional: Global error handler (overrides errorHandling)
 }
+
+type ErrorHandler = (
+  error: unknown,
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => void | Promise<void>;
 ```
 
 ## API Reference
@@ -148,8 +171,19 @@ Creates a payout middleware for withdrawals.
 interface CreatePayoutMiddlewareOptions {
   mapRequest: (req: Request, res: Response) => CreatePayoutRequest;
   transformResponse?: (response: CreatePayoutResponse) => unknown;
+  onError?: ErrorHandler;
+}
+
+interface CreatePayoutRequest {
+  withdrawals: PayoutWithdrawal[];
+  ipn_callback_url?: string;
+  payout_description?: string; // Description for all payouts in the batch
 }
 ```
+
+**About payout_description:**
+
+The `payout_description` field is optional and applies to all payouts in the batch. You can use it to categorize or label payouts (e.g., "affiliate_commission", "refund_batch_001") for easier tracking and webhook routing.
 
 **Automatic Payout Verification:**
 
@@ -169,6 +203,7 @@ app.post('/create-payout',
   NowPaymentsMiddleware.createPayout({
     mapRequest: (req, res) => ({
       withdrawals: req.body.withdrawals,
+      payout_description: req.body.payoutType, // e.g., "affiliate_commission"
       ipn_callback_url: 'https://your-domain.com/webhook/payout',
     }),
   }),
