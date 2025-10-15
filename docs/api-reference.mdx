@@ -10,7 +10,7 @@ Creates a payment middleware for standard payments.
 
 ```typescript
 interface CreatePaymentMiddlewareOptions {
-  mapRequest: (req: Request) => CreatePaymentRequest;
+  mapRequest: (req: Request, res: Response) => CreatePaymentRequest;
   transformResponse?: (response: CreatePaymentResponse) => unknown;
   onError?: ErrorHandler;
 }
@@ -18,7 +18,7 @@ interface CreatePaymentMiddlewareOptions {
 // Usage
 app.post('/payment',
   NowPaymentsMiddleware.createPayment({
-    mapRequest: (req) => ({
+    mapRequest: (req, res) => ({
       price_amount: req.body.amount,
       price_currency: req.body.currency,
       pay_currency: req.body.cryptoCurrency,
@@ -45,7 +45,7 @@ Creates a payment middleware for invoice-based payments.
 
 ```typescript
 interface CreatePaymentByInvoiceMiddlewareOptions {
-  mapRequest: (req: Request) => CreatePaymentByInvoiceRequest;
+  mapRequest: (req: Request, res: Response) => CreatePaymentByInvoiceRequest;
   transformResponse?: (response: CreatePaymentByInvoiceResponse) => unknown;
   onError?: ErrorHandler;
 }
@@ -53,7 +53,7 @@ interface CreatePaymentByInvoiceMiddlewareOptions {
 // Usage
 app.post('/invoice-payment',
   NowPaymentsMiddleware.createPaymentByInvoice({
-    mapRequest: (req) => ({
+    mapRequest: (req, res) => ({
       iid: req.body.invoiceId,
       pay_currency: req.body.cryptoCurrency,
       order_id: req.body.orderId,
@@ -73,7 +73,7 @@ Creates a payout middleware for withdrawals.
 
 ```typescript
 interface CreatePayoutMiddlewareOptions {
-  mapRequest: (req: Request) => CreatePayoutRequest;
+  mapRequest: (req: Request, res: Response) => CreatePayoutRequest;
   transformResponse?: (response: CreatePayoutResponse) => unknown;
   onError?: ErrorHandler;
 }
@@ -81,7 +81,7 @@ interface CreatePayoutMiddlewareOptions {
 // Usage
 app.post('/payout',
   NowPaymentsMiddleware.createPayout({
-    mapRequest: (req) => ({
+    mapRequest: (req, res) => ({
       withdrawals: req.body.withdrawals,
     }),
     transformResponse: (response) => ({
@@ -314,6 +314,47 @@ class NowPaymentsNetworkError extends NowPaymentsError {
 }
 ```
 
+## Request Mapping with res.locals
+
+The `mapRequest` function receives both `req` and `res` parameters, allowing you to access data added by previous middleware through `res.locals`. This is useful when you need to include contextual information (user ID, authentication data, etc.) in the payment request.
+
+### Example: Using Authentication Data
+
+```typescript
+// Middleware that adds user info to res.locals
+app.use((req, res, next) => {
+  res.locals.userId = req.headers['x-user-id'];
+  res.locals.accountId = req.headers['x-account-id'];
+  next();
+});
+
+// Now you can access this data in mapRequest
+app.post('/create-payment',
+  NowPaymentsMiddleware.createPayment({
+    mapRequest: (req, res) => ({
+      price_amount: req.body.amount,
+      price_currency: req.body.currency,
+      pay_currency: req.body.cryptoCurrency,
+      order_id: `order_${res.locals.userId}_${Date.now()}`,
+      customer_email: req.body.email,
+      // Include account-specific webhook URL
+      ipn_callback_url: `https://your-domain.com/webhook/payment/${res.locals.accountId}`,
+    }),
+    transformResponse: (response) => ({
+      paymentId: response.payment_id,
+      status: response.payment_status,
+      payAddress: response.pay_address,
+      amount: response.pay_amount,
+      currency: response.pay_currency,
+    }),
+  }),
+  (req, res) => {
+    const payment = res.locals.nowPaymentsResponse;
+    res.json({ success: true, payment });
+  }
+);
+```
+
 ## Error Handling Types
 
 ### `ErrorHandler`
@@ -341,7 +382,7 @@ Per-middleware error handler:
 ```typescript
 app.post('/payment',
   NowPaymentsMiddleware.createPayment({
-    mapRequest: (req) => ({ /* ... */ }),
+    mapRequest: (req, res) => ({ /* ... */ }),
     onError: async (error, req, res, next) => {
       console.error('Payment error:', error);
 

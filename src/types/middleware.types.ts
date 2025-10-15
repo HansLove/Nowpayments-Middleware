@@ -30,7 +30,7 @@ export interface NowPaymentsConfig {
 }
 
 export interface RequestMapper<T> {
-  (req: Request): T;
+  (req: Request, res: Response): T;
 }
 
 export interface ResponseTransformer<T, U> {

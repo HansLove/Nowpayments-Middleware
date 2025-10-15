@@ -18,7 +18,7 @@ NowPaymentsMiddleware.configure({
 
 app.post('/create-payment',
   NowPaymentsMiddleware.createPayment({
-    mapRequest: (req) => ({
+    mapRequest: (req, res) => ({
       price_amount: req.body.amount,
       price_currency: req.body.currency,
       pay_currency: req.body.cryptoCurrency,
@@ -79,7 +79,7 @@ app.post('/create-payment',
 
 app.post('/create-payout',
   NowPaymentsMiddleware.createPayout({
-    mapRequest: (req) => ({
+    mapRequest: (req, res) => ({
       withdrawals: req.body.withdrawals.map((withdrawal: any) => ({
         address: withdrawal.address,
         currency: withdrawal.currency,

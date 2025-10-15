@@ -19,7 +19,7 @@ class CreatePaymentByInvoiceMiddleware extends BaseMiddleware {
           throw new NowPaymentsValidationError('mapRequest function is required');
         }
 
-        const paymentData = options.mapRequest(req);
+        const paymentData = options.mapRequest(req, res);
         
         if (!paymentData.iid || !paymentData.pay_currency) {
           throw new NowPaymentsValidationError('iid and pay_currency are required');

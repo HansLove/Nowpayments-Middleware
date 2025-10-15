@@ -19,7 +19,7 @@ class CreatePaymentMiddleware extends BaseMiddleware {
           throw new NowPaymentsValidationError('mapRequest function is required');
         }
 
-        const paymentData = options.mapRequest(req);
+        const paymentData = options.mapRequest(req, res);
         
         if (!paymentData.price_amount || !paymentData.price_currency || !paymentData.pay_currency) {
           throw new NowPaymentsValidationError('price_amount, price_currency, and pay_currency are required');

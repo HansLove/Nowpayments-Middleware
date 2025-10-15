@@ -20,7 +20,7 @@ NowPaymentsMiddleware.configure({
 
 app.post('/create-payment',
   NowPaymentsMiddleware.createPayment({
-    mapRequest: (req) => ({
+    mapRequest: (req, res) => ({
       price_amount: req.body.amount,
       price_currency: req.body.currency,
       pay_currency: req.body.cryptoCurrency,
@@ -54,7 +54,7 @@ app.post('/create-payment',
 ```typescript
 app.post('/create-invoice-payment',
   NowPaymentsMiddleware.createPaymentByInvoice({
-    mapRequest: (req) => ({
+    mapRequest: (req, res) => ({
       iid: req.body.invoiceId,
       pay_currency: req.body.cryptoCurrency,
       order_id: req.body.orderId,
@@ -83,7 +83,7 @@ app.post('/create-invoice-payment',
 ```typescript
 app.post('/create-payout',
   NowPaymentsMiddleware.createPayout({
-    mapRequest: (req) => ({
+    mapRequest: (req, res) => ({
       withdrawals: req.body.withdrawals.map((withdrawal: any) => ({
         address: withdrawal.address,
         currency: withdrawal.currency,
@@ -130,9 +130,9 @@ const orders = new Map<string, Order>();
 
 app.post('/orders',
   NowPaymentsMiddleware.createPayment({
-    mapRequest: (req) => {
+    mapRequest: (req, res) => {
       const orderId = `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
+
       const order: Order = {
         id: orderId,
         amount: req.body.amount,
@@ -141,9 +141,9 @@ app.post('/orders',
         status: 'pending',
         customerEmail: req.body.email,
       };
-      
+
       orders.set(orderId, order);
-      
+
       return {
         price_amount: req.body.amount,
         price_currency: req.body.currency,

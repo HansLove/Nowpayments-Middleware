@@ -55,9 +55,9 @@ const payouts = new Map<string, any>();
 
 app.post('/orders',
   NowPaymentsMiddleware.createPayment({
-    mapRequest: (req) => {
+    mapRequest: (req, res) => {
       const orderId = `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
+
       const order: Order = {
         id: orderId,
         amount: req.body.amount,
@@ -66,9 +66,9 @@ app.post('/orders',
         status: 'pending',
         customerEmail: req.body.email,
       };
-      
+
       orders.set(orderId, order);
-      
+
       return {
         price_amount: req.body.amount,
         price_currency: req.body.currency,
@@ -128,7 +128,7 @@ app.get('/orders/:orderId', (req, res) => {
 
 app.post('/payouts',
   NowPaymentsMiddleware.createPayout({
-    mapRequest: (req) => ({
+    mapRequest: (req, res) => ({
       withdrawals: req.body.withdrawals,
       ipn_callback_url: `${req.protocol}://${req.get('host')}/webhook/payout`,
     }),

@@ -54,7 +54,7 @@ app.use(express.json());
 
 app.post('/create-payment',
   NowPaymentsMiddleware.createPayment({
-    mapRequest: (req) => ({
+    mapRequest: (req, res) => ({
       price_amount: req.body.amount,
       price_currency: req.body.currency,
       pay_currency: req.body.cryptoCurrency,

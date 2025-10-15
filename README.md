@@ -44,7 +44,7 @@ app.use(express.json());
 
 app.post('/create-payment',
   NowPaymentsMiddleware.createPayment({
-    mapRequest: (req) => ({
+    mapRequest: (req, res) => ({
       price_amount: req.body.amount,
       price_currency: req.body.currency,
       pay_currency: req.body.cryptoCurrency,
@@ -124,7 +124,7 @@ Creates a payment middleware for standard payments.
 
 ```typescript
 interface CreatePaymentMiddlewareOptions {
-  mapRequest: (req: Request) => CreatePaymentRequest;
+  mapRequest: (req: Request, res: Response) => CreatePaymentRequest;
   transformResponse?: (response: CreatePaymentResponse) => unknown;
 }
 ```
@@ -135,7 +135,7 @@ Creates a payment middleware for invoice-based payments.
 
 ```typescript
 interface CreatePaymentByInvoiceMiddlewareOptions {
-  mapRequest: (req: Request) => CreatePaymentByInvoiceRequest;
+  mapRequest: (req: Request, res: Response) => CreatePaymentByInvoiceRequest;
   transformResponse?: (response: CreatePaymentByInvoiceResponse) => unknown;
 }
 ```
@@ -146,7 +146,7 @@ Creates a payout middleware for withdrawals.
 
 ```typescript
 interface CreatePayoutMiddlewareOptions {
-  mapRequest: (req: Request) => CreatePayoutRequest;
+  mapRequest: (req: Request, res: Response) => CreatePayoutRequest;
   transformResponse?: (response: CreatePayoutResponse) => unknown;
 }
 ```
@@ -167,7 +167,7 @@ NowPaymentsMiddleware.configure({
 // Payouts will now be automatically verified
 app.post('/create-payout',
   NowPaymentsMiddleware.createPayout({
-    mapRequest: (req) => ({
+    mapRequest: (req, res) => ({
       withdrawals: req.body.withdrawals,
       ipn_callback_url: 'https://your-domain.com/webhook/payout',
     }),
@@ -302,7 +302,7 @@ NowPaymentsMiddleware.configure({
 // Create payment
 app.post('/orders',
   NowPaymentsMiddleware.createPayment({
-    mapRequest: (req) => ({
+    mapRequest: (req, res) => ({
       price_amount: req.body.amount,
       price_currency: req.body.currency,
       pay_currency: req.body.cryptoCurrency,

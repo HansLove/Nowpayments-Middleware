@@ -21,7 +21,7 @@ class CreatePayoutMiddleware extends BaseMiddleware {
           throw new NowPaymentsValidationError('mapRequest function is required');
         }
 
-        const payoutData = options.mapRequest(req);
+        const payoutData = options.mapRequest(req, res);
         
         if (!payoutData.withdrawals || payoutData.withdrawals.length === 0) {
           throw new NowPaymentsValidationError('withdrawals array is required and cannot be empty');
