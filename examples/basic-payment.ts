@@ -109,9 +109,41 @@ app.post('/create-payout',
   }
 );
 
+// Fixed-amount payment using createInvoicePayment
+// Ideal for accepting specific crypto (e.g., USDT on Polygon) for a fixed fiat amount
+app.post('/create-fixed-payment',
+  NowPaymentsMiddleware.createInvoicePayment({
+    mapRequest: (req, res) => ({
+      price_amount: req.body.amount,
+      price_currency: req.body.currency || 'usd',
+      pay_currency: req.body.cryptoCurrency || 'usdtmatic',
+      order_id: req.body.orderId,
+      order_description: req.body.description,
+      customer_email: req.body.email,
+      ipn_callback_url: 'https://your-domain.com/webhook/payment',
+    }),
+    transformResponse: (response) => ({
+      paymentId: response.payment_id,
+      status: response.payment_status,
+      payAddress: response.pay_address,
+      payAmount: response.pay_amount,
+      payCurrency: response.pay_currency,
+      expiresAt: response.expiration_estimate_date,
+    }),
+  }),
+  (req, res) => {
+    const payment = res.locals.nowPaymentsResponse;
+
+    res.status(201).json({
+      success: true,
+      payment,
+    });
+  }
+);
+
 app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('Error:', error);
-  
+
   res.status(error.statusCode || 500).json({
     error: {
       code: error.code || 'INTERNAL_ERROR',

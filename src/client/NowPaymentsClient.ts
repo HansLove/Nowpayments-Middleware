@@ -10,6 +10,8 @@ import {
   CreatePaymentResponse,
   CreatePaymentByInvoiceRequest,
   CreatePaymentByInvoiceResponse,
+  CreateInvoiceRequest,
+  CreateInvoiceResponse,
   CreatePayoutRequest,
   CreatePayoutResponse,
   VerifyPayoutRequest,
@@ -76,6 +78,14 @@ export class NowPaymentsClient {
         '/invoice-payment',
         data
       );
+    return response.data;
+  }
+
+  async createInvoice(data: CreateInvoiceRequest): Promise<CreateInvoiceResponse> {
+    const response = await this.axiosInstance.post<CreateInvoiceResponse>(
+      '/invoice',
+      data
+    );
     return response.data;
   }
 

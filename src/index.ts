@@ -1,6 +1,7 @@
 import { NowPaymentsConfiguration } from '@/config/NowPaymentsConfig';
 import { createPayment } from '@/middlewares/createPayment';
 import { createPaymentByInvoice } from '@/middlewares/createPaymentByInvoice';
+import { createInvoicePayment } from '@/middlewares/createInvoicePayment';
 import { createPayout } from '@/middlewares/createPayout';
 import { paymentWebhook } from '@/middlewares/webhooks/paymentWebhook';
 import { payoutWebhook } from '@/middlewares/webhooks/payoutWebhook';
@@ -12,6 +13,7 @@ export * from '@/constants/statuses';
 export {
   createPayment,
   createPaymentByInvoice,
+  createInvoicePayment,
   createPayout,
   paymentWebhook,
   payoutWebhook,
@@ -21,6 +23,7 @@ export const NowPaymentsMiddleware = {
   configure: NowPaymentsConfiguration.configure.bind(NowPaymentsConfiguration),
   createPayment,
   createPaymentByInvoice,
+  createInvoicePayment,
   createPayout,
   paymentWebhook,
   payoutWebhook,

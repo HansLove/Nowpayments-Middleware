@@ -67,6 +67,63 @@ app.post('/invoice-payment',
 );
 ```
 
+### `createInvoicePayment(options)`
+
+Creates a composite middleware that internally creates an invoice and then creates a payment from it. This is ideal for fixed-amount payments where you want to accept a specific cryptocurrency without redirecting the user.
+
+```typescript
+interface CreateInvoicePaymentMiddlewareOptions {
+  mapRequest: (req: Request, res: Response) => CreateInvoicePaymentRequest;
+  transformResponse?: (response: CreatePaymentByInvoiceResponse) => unknown;
+  onError?: ErrorHandler;
+}
+
+interface CreateInvoicePaymentRequest {
+  // Invoice fields
+  price_amount: number;
+  price_currency: string;
+  order_id?: string;
+  order_description?: string;
+  ipn_callback_url?: string;
+  success_url?: string;
+  cancel_url?: string;
+  // Payment field
+  pay_currency: string;
+  customer_email?: string;
+  payout_address?: string;
+  payout_extra_id?: string;
+  payout_currency?: string;
+}
+
+// Usage
+app.post('/fixed-payment',
+  NowPaymentsMiddleware.createInvoicePayment({
+    mapRequest: (req, res) => ({
+      price_amount: req.body.amount,
+      price_currency: 'usd',
+      order_id: req.body.orderId,
+      ipn_callback_url: 'https://your-domain.com/webhook',
+      pay_currency: 'usdtmatic', // USDT on Polygon
+    }),
+    transformResponse: (response) => ({
+      paymentId: response.payment_id,
+      payAddress: response.pay_address,
+      payAmount: response.pay_amount,
+      status: response.payment_status,
+    }),
+  }),
+  (req, res) => {
+    const payment = res.locals.nowPaymentsResponse;
+    res.json({ payment });
+  }
+);
+```
+
+**When to use:**
+- You want a fixed fiat amount converted to crypto
+- You don't have a pre-existing invoice ID
+- You want a seamless flow without redirecting to NowPayments
+
 ### `createPayout(options)`
 
 Creates a payout middleware for withdrawals.

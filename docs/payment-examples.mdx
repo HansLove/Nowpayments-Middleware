@@ -78,6 +78,48 @@ app.post('/create-invoice-payment',
 );
 ```
 
+## Fixed-Amount Invoice Payment
+
+For scenarios where you want to accept a fixed fiat amount in a specific cryptocurrency without pre-creating an invoice:
+
+```typescript
+// Accept exactly $100 USD paid in USDT on Polygon
+app.post('/checkout',
+  NowPaymentsMiddleware.createInvoicePayment({
+    mapRequest: (req, res) => ({
+      price_amount: 100,
+      price_currency: 'usd',
+      pay_currency: 'usdtmatic', // USDT on Polygon
+      order_id: req.body.orderId,
+      order_description: 'Premium subscription',
+      ipn_callback_url: 'https://your-domain.com/webhook/payment',
+    }),
+    transformResponse: (response) => ({
+      paymentId: response.payment_id,
+      status: response.payment_status,
+      payAddress: response.pay_address,
+      payAmount: response.pay_amount,
+      payCurrency: response.pay_currency,
+      expiresAt: response.expiration_estimate_date,
+    }),
+  }),
+  (req, res) => {
+    const payment = res.locals.nowPaymentsResponse;
+
+    // Display in your UI: "Send X USDT to address Y"
+    res.json({
+      success: true,
+      payment,
+    });
+  }
+);
+```
+
+**Key differences from `createPaymentByInvoice`:**
+- No need to create an invoice beforehand
+- Internally creates invoice + payment in one step
+- Same response format as other payment middlewares
+
 ## Payout Creation
 
 ### Basic Payout

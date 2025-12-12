@@ -47,6 +47,50 @@ export interface CreatePaymentByInvoiceRequest {
 
 export type CreatePaymentByInvoiceResponse = CreatePaymentResponse;
 
+// Internal: Invoice creation
+export interface CreateInvoiceRequest {
+  price_amount: number;
+  price_currency: string;
+  order_id?: string;
+  order_description?: string;
+  ipn_callback_url?: string;
+  success_url?: string;
+  cancel_url?: string;
+}
+
+export interface CreateInvoiceResponse {
+  id: string;
+  order_id?: string;
+  order_description?: string;
+  price_amount: string;
+  price_currency: string;
+  pay_currency?: string;
+  ipn_callback_url?: string;
+  invoice_url: string;
+  success_url?: string;
+  cancel_url?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// User-facing: Composite request
+export interface CreateInvoicePaymentRequest {
+  // Invoice fields
+  price_amount: number;
+  price_currency: string;
+  order_id?: string;
+  order_description?: string;
+  ipn_callback_url?: string;
+  success_url?: string;
+  cancel_url?: string;
+  // Payment field
+  pay_currency: string;
+  customer_email?: string;
+  payout_address?: string;
+  payout_extra_id?: string;
+  payout_currency?: string;
+}
+
 export interface PayoutWithdrawal {
   address: string;
   currency: string;

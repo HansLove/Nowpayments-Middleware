@@ -4,6 +4,7 @@ import {
   CreatePaymentResponse,
   CreatePaymentByInvoiceRequest,
   CreatePaymentByInvoiceResponse,
+  CreateInvoicePaymentRequest,
   CreatePayoutRequest,
   CreatePayoutResponse,
   PaymentWebhookPayload,
@@ -52,6 +53,12 @@ export interface CreatePaymentByInvoiceMiddlewareOptions {
 export interface CreatePayoutMiddlewareOptions {
   mapRequest: RequestMapper<CreatePayoutRequest>;
   transformResponse?: ResponseTransformer<CreatePayoutResponse, unknown>;
+  onError?: ErrorHandler;
+}
+
+export interface CreateInvoicePaymentMiddlewareOptions {
+  mapRequest: RequestMapper<CreateInvoicePaymentRequest>;
+  transformResponse?: ResponseTransformer<CreatePaymentByInvoiceResponse, unknown>;
   onError?: ErrorHandler;
 }
 
