@@ -29,7 +29,8 @@
       "@/client": ["./client"],
       "@/middlewares": ["./middlewares"],
       "@/utils": ["./utils"],
-      "@/constants": ["./constants"]
+      "@/constants": ["./constants"],
+      "@/dispersion": ["./dispersion"]
     }
   },
   "include": ["src/**/*"],

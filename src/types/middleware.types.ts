@@ -7,9 +7,11 @@ import {
   CreateInvoicePaymentRequest,
   CreatePayoutRequest,
   CreatePayoutResponse,
+  CreatePayoutWithDispersionRequest,
   PaymentWebhookPayload,
   PayoutWebhookPayload,
 } from './api.types';
+import { DispersionConfig } from './dispersion.types';
 
 export type ErrorHandlingMode = 'next' | 'direct';
 
@@ -28,6 +30,7 @@ export interface NowPaymentsConfig {
   baseURL?: string;
   errorHandling?: ErrorHandlingMode;
   onError?: ErrorHandler;
+  dispersion?: DispersionConfig;
 }
 
 export interface RequestMapper<T> {
@@ -46,7 +49,10 @@ export interface CreatePaymentMiddlewareOptions {
 
 export interface CreatePaymentByInvoiceMiddlewareOptions {
   mapRequest: RequestMapper<CreatePaymentByInvoiceRequest>;
-  transformResponse?: ResponseTransformer<CreatePaymentByInvoiceResponse, unknown>;
+  transformResponse?: ResponseTransformer<
+    CreatePaymentByInvoiceResponse,
+    unknown
+  >;
   onError?: ErrorHandler;
 }
 
@@ -56,9 +62,18 @@ export interface CreatePayoutMiddlewareOptions {
   onError?: ErrorHandler;
 }
 
+export interface CreatePayoutWithDispersionMiddlewareOptions {
+  mapRequest: RequestMapper<CreatePayoutWithDispersionRequest>;
+  transformResponse?: ResponseTransformer<CreatePayoutResponse, unknown>;
+  onError?: ErrorHandler;
+}
+
 export interface CreateInvoicePaymentMiddlewareOptions {
   mapRequest: RequestMapper<CreateInvoicePaymentRequest>;
-  transformResponse?: ResponseTransformer<CreatePaymentByInvoiceResponse, unknown>;
+  transformResponse?: ResponseTransformer<
+    CreatePaymentByInvoiceResponse,
+    unknown
+  >;
   onError?: ErrorHandler;
 }
 
@@ -86,7 +101,11 @@ export interface PayoutWebhookCallbacks {
   onRejected?: AsyncCallback<PayoutWebhookPayload>;
 }
 
-export type ExpressMiddleware = (req: Request, res: Response, next: NextFunction) => void | Promise<void>;
+export type ExpressMiddleware = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => void | Promise<void>;
 
 declare global {
   namespace Express {

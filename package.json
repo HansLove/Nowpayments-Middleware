@@ -38,7 +38,17 @@
   "author": "Diego <DieGopherLT>",
   "license": "MIT",
   "peerDependencies": {
-    "express": "^4.17.0 || ^5.0.0"
+    "express": "^4.17.0 || ^5.0.0",
+    "ethers": "^6.0.0",
+    "tronweb": "^6.0.0"
+  },
+  "peerDependenciesMeta": {
+    "ethers": {
+      "optional": true
+    },
+    "tronweb": {
+      "optional": true
+    }
   },
   "dependencies": {
     "axios": "^1.7.9",

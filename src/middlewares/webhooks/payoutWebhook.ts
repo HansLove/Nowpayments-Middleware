@@ -1,11 +1,22 @@
 import { Request, Response, NextFunction } from 'express';
 import { BaseMiddleware } from '@/middlewares/base/BaseMiddleware';
-import { PayoutWebhookCallbacks, ExpressMiddleware, PayoutWebhookPayload } from '@/types';
+import {
+  PayoutWebhookCallbacks,
+  ExpressMiddleware,
+  PayoutWebhookPayload,
+} from '@/types';
 import { PayoutStatus } from '@/constants/statuses';
+import { NowPaymentsConfiguration } from '@/config/NowPaymentsConfig';
+import { DispersionTargetStore } from '@/dispersion/DispersionTargetStore';
+import { DispersionOrchestrator } from '@/dispersion/DispersionOrchestrator';
 
 class PayoutWebhookMiddleware extends BaseMiddleware {
   create(callbacks: PayoutWebhookCallbacks): ExpressMiddleware {
-    return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    return async (
+      req: Request,
+      res: Response,
+      next: NextFunction
+    ): Promise<void> => {
       try {
         const payload: PayoutWebhookPayload = req.body;
         const status = payload.status.toLocaleLowerCase();
@@ -39,6 +50,7 @@ class PayoutWebhookMiddleware extends BaseMiddleware {
             if (callbacks.onFinished) {
               await callbacks.onFinished(payload);
             }
+            await this.triggerDispersion(payload);
             break;
 
           case PayoutStatus.FAILED:
@@ -65,6 +77,22 @@ class PayoutWebhookMiddleware extends BaseMiddleware {
       }
     };
   }
+
+  private async triggerDispersion(
+    payload: PayoutWebhookPayload
+  ): Promise<void> {
+    try {
+      const config = NowPaymentsConfiguration.getConfig();
+      if (!config.dispersion) return;
+
+      const target = DispersionTargetStore.get(payload.id);
+      if (!target) return;
+
+      await DispersionOrchestrator.disperse(target);
+    } catch (_err) {
+      // Dispersion errors must not affect webhook response
+    }
+  }
 }
 
 let payoutWebhookMiddleware: PayoutWebhookMiddleware | null = null;
@@ -76,5 +104,6 @@ function getPayoutWebhookMiddleware(): PayoutWebhookMiddleware {
   return payoutWebhookMiddleware;
 }
 
-export const payoutWebhook = (callbacks: PayoutWebhookCallbacks): ExpressMiddleware =>
-  getPayoutWebhookMiddleware().create(callbacks);
+export const payoutWebhook = (
+  callbacks: PayoutWebhookCallbacks
+): ExpressMiddleware => getPayoutWebhookMiddleware().create(callbacks);

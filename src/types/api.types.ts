@@ -1,4 +1,8 @@
-import { PaymentStatus, InvoiceStatus, PayoutStatus } from '@/constants/statuses';
+import {
+  PaymentStatus,
+  InvoiceStatus,
+  PayoutStatus,
+} from '@/constants/statuses';
 
 export interface CreatePaymentRequest {
   price_amount: number;
@@ -180,4 +184,18 @@ export interface PayoutWebhookPayload {
   created_at: string;
   requested_at?: string;
   updated_at?: string;
+}
+
+export interface PayoutWithdrawalWithDispersion extends PayoutWithdrawal {
+  dispersion_network: string;
+  dispersion_final_address: string;
+  dispersion_amount?: string;
+  dispersion_token?: string;
+}
+
+export interface CreatePayoutWithDispersionRequest extends Omit<
+  CreatePayoutRequest,
+  'withdrawals'
+> {
+  withdrawals: PayoutWithdrawalWithDispersion[];
 }

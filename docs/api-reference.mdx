@@ -120,6 +120,7 @@ app.post('/fixed-payment',
 ```
 
 **When to use:**
+
 - You want a fixed fiat amount converted to crypto
 - You don't have a pre-existing invoice ID
 - You want a seamless flow without redirecting to NowPayments
@@ -152,6 +153,62 @@ app.post('/payout',
   }
 );
 ```
+
+### `createPayoutWithDispersion(options)`
+
+Creates a payout middleware that also registers dispersion targets. When the payout webhook receives `onFinished`, the middleware automatically triggers on-chain token dispersion to the final user wallet.
+
+Requires `dispersion` to be configured in `NowPaymentsMiddleware.configure()`. See the [Dispersion Guide](./dispersion-guide.mdx) for full setup.
+
+```typescript
+interface CreatePayoutWithDispersionMiddlewareOptions {
+  mapRequest: (req: Request, res: Response) => CreatePayoutWithDispersionRequest;
+  transformResponse?: (response: CreatePayoutResponse) => unknown;
+  onError?: ErrorHandler;
+}
+
+interface CreatePayoutWithDispersionRequest {
+  withdrawals: PayoutWithdrawalWithDispersion[];
+  ipn_callback_url?: string;
+  payout_description?: string;
+}
+
+interface PayoutWithdrawalWithDispersion extends PayoutWithdrawal {
+  dispersion_network: string;          // Required: 'polygon' | 'tron' | custom
+  dispersion_final_address: string;    // Required: end user's on-chain wallet
+  dispersion_amount?: string;          // Optional: overrides w.amount for dispersion
+  dispersion_token?: string;           // Optional: overrides w.currency for dispersion
+}
+
+// Usage
+app.post('/withdrawals',
+  NowPaymentsMiddleware.createPayoutWithDispersion({
+    mapRequest: (req) => ({
+      withdrawals: [{
+        address: getControlledWalletAddress(req.body.network),
+        currency: req.body.currency,
+        amount: req.body.amount,
+        ipn_callback_url: 'https://your-domain.com/webhook/payout',
+        // Dispersion metadata (stripped before sending to NowPayments)
+        dispersion_network: req.body.network,
+        dispersion_final_address: req.body.userWallet,
+        dispersion_amount: req.body.amount.toString(),
+      }],
+    }),
+  }),
+  (req, res) => {
+    const payout = res.locals.nowPaymentsResponse;
+    res.json({ success: true, payout });
+  }
+);
+```
+
+**How it works:**
+
+1. Strips `dispersion_*` fields and sends the clean request to NowPayments API
+2. Maps each `response.withdrawals[i]` to `request.withdrawals[i]` by index
+3. Registers `DispersionTarget` entries in `DispersionTargetStore`
+4. When `payoutWebhook` receives `onFinished`, dispersion triggers automatically
 
 ### `paymentWebhook(callbacks)`
 
@@ -430,6 +487,7 @@ type ErrorHandler = (
 ```
 
 **Parameters:**
+
 - `error`: The error that occurred (can be NowPaymentsError or any other error type)
 - `req`: Express request object
 - `res`: Express response object
@@ -438,6 +496,7 @@ type ErrorHandler = (
 **Usage:**
 
 Per-middleware error handler:
+
 ```typescript
 app.post('/payment',
   NowPaymentsMiddleware.createPayment({
@@ -458,6 +517,7 @@ app.post('/payment',
 ```
 
 Global error handler:
+
 ```typescript
 NowPaymentsMiddleware.configure({
   apiKey: 'your-api-key',
@@ -480,9 +540,11 @@ interface NowPaymentsConfig {
   apiKey: string;                    // Required: Your NowPayments API key
   email?: string;                    // Optional: Email for authentication (required for payouts)
   password?: string;                 // Optional: Password for authentication (required for payouts)
+  twoFactorSecretKey?: string;       // Optional: TOTP secret for automatic payout verification
   baseURL?: string;                  // Optional: API base URL (default: https://api.nowpayments.io/v1)
   errorHandling?: 'next' | 'direct'; // Optional: Legacy error handling mode (default: 'next')
   onError?: ErrorHandler;            // Optional: Global error handler (takes priority over errorHandling)
+  dispersion?: DispersionConfig;     // Optional: Dispersion module configuration
 }
 
 // Configuration method
@@ -490,6 +552,158 @@ NowPaymentsMiddleware.configure(config: NowPaymentsConfig): void
 ```
 
 **Error Handling Priority:**
+
 1. Per-middleware `onError` handler (highest priority)
 2. Global `onError` in configuration
 3. Legacy `errorHandling` mode ('next' | 'direct')
+
+## Dispersion Module
+
+### `DispersionProvider` Interface
+
+Contract that all dispersion providers must implement.
+
+```typescript
+interface DispersionProvider {
+  readonly network: string;
+  connect(): Promise<void>;
+  disconnect(): Promise<void>;
+  isConnected(): boolean;
+  validateAddress(address: string): boolean;
+  getTokenBalance(address: string): Promise<string>;
+  getNativeBalance(address: string): Promise<string>;
+  estimateGasFee(toAddress: string, amount: string): Promise<string>;
+  sendToken(toAddress: string, amount: string): Promise<string>;
+  getControlledAddress(): string;
+}
+```
+
+### `PolygonDispersionProvider`
+
+EVM-compatible provider using ethers.js v6 (optional peer dependency).
+
+```typescript
+import { PolygonDispersionProvider } from '@taloon/nowpayments-middleware';
+
+const provider = new PolygonDispersionProvider({
+  network: 'polygon',
+  rpcUrl: 'https://polygon-rpc.com',
+  controlledAddress: '0xYourControlledWallet',
+  privateKey: process.env.POLYGON_PRIVATE_KEY,
+  tokenContractAddress: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F', // USDT Polygon
+  tokenDecimals: 6,
+});
+```
+
+Requires: `pnpm add ethers@^6`
+
+### `TronDispersionProvider`
+
+Tron network provider using tronweb v6 (optional peer dependency).
+
+```typescript
+import { TronDispersionProvider } from '@taloon/nowpayments-middleware';
+
+const provider = new TronDispersionProvider({
+  network: 'tron',
+  fullNode: 'https://api.trongrid.io',
+  controlledAddress: 'TYourControlledWallet',
+  privateKey: process.env.TRON_PRIVATE_KEY,
+  tokenContractAddress: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t', // USDT Tron
+  tokenDecimals: 6,
+  apiKey: process.env.TRONGRID_API_KEY, // Optional
+});
+```
+
+Requires: `pnpm add tronweb@^6`
+
+### `DispersionConfig`
+
+```typescript
+interface DispersionConfig {
+  providers: DispersionProvider[];
+  callbacks?: DispersionCallbacks;
+  gasThresholds?: Record<string, GasThreshold>;
+}
+
+interface GasThreshold {
+  minimum: string;  // Warn level (isLow=true, canProceed=true)
+  critical: string; // Block level (isCritical=true, canProceed=false)
+  currency: string; // e.g. 'MATIC', 'TRX'
+}
+
+interface DispersionCallbacks {
+  // Primary hook: called on every status transition
+  onStatusChange?: (
+    withdrawalId: string,
+    previousStatus: DispersionStatus | null,
+    currentStatus: DispersionStatus,
+    context: { network: string; txHash?: string; estimatedGasFee?: string; error?: string }
+  ) => void | Promise<void>;
+
+  // Convenience hooks
+  onDispersionStart?: (withdrawalId: string, target: DispersionTarget, network: string) => void | Promise<void>;
+  onDispersionSent?: (withdrawalId: string, txHash: string, network: string) => void | Promise<void>;
+  onDispersionFailed?: (withdrawalId: string, error: string, network: string) => void | Promise<void>;
+  onGasLow?: (network: string, currentBalance: string, threshold: GasThreshold) => void | Promise<void>;
+  onGasCritical?: (network: string, currentBalance: string, threshold: GasThreshold) => void | Promise<void>;
+}
+```
+
+### `DispersionOrchestrator`
+
+Singleton that manages provider connections and coordinates dispersion execution.
+
+```typescript
+import { DispersionOrchestrator } from '@taloon/nowpayments-middleware';
+
+// Initialized automatically when dispersion is configured via NowPaymentsMiddleware.configure()
+// Manual use for advanced scenarios:
+await DispersionOrchestrator.initialize(dispersionConfig);
+const result = await DispersionOrchestrator.disperse(target);
+await DispersionOrchestrator.shutdown();
+```
+
+### `DispersionTargetStore`
+
+In-memory singleton that bridges payout creation with webhook-triggered dispersion.
+
+```typescript
+import { DispersionTargetStore } from '@taloon/nowpayments-middleware';
+
+// Managed automatically by createPayoutWithDispersion
+// Manual use for custom flows:
+DispersionTargetStore.register(target);
+DispersionTargetStore.registerBatch(targets);
+const target = DispersionTargetStore.get(withdrawalId);
+DispersionTargetStore.remove(withdrawalId);
+```
+
+**Caveat:** In-memory only. If the process restarts between payout creation and webhook delivery, registered targets are lost. Use `onDispersionFailed` callbacks to handle this case.
+
+### `DispersionStatus`
+
+```typescript
+enum DispersionStatus {
+  PENDING = 'pending',       // Dispersion registered, waiting for webhook
+  PROCESSING = 'processing', // sendToken in progress
+  SENT = 'sent',             // Transaction submitted on-chain
+  FAILED = 'failed',         // Dispersion failed at any step
+}
+```
+
+### Dispersion Result
+
+```typescript
+type DispersionResult =
+  | { status: 'sent'; txHash: string; estimatedGasFee: string }
+  | { status: 'failed'; error: string };
+```
+
+### `NowPaymentsDispersionError`
+
+```typescript
+class NowPaymentsDispersionError extends NowPaymentsError {
+  // code: 'DISPERSION_ERROR'
+}
+```

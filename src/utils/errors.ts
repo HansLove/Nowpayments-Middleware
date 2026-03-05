@@ -3,7 +3,12 @@ export class NowPaymentsError extends Error {
   public readonly statusCode?: number;
   public readonly originalError?: unknown;
 
-  constructor(message: string, code: string, statusCode?: number, originalError?: unknown) {
+  constructor(
+    message: string,
+    code: string,
+    statusCode?: number,
+    originalError?: unknown
+  ) {
     super(message);
     this.name = 'NowPaymentsError';
     this.code = code;
@@ -37,5 +42,12 @@ export class NowPaymentsNetworkError extends NowPaymentsError {
   constructor(message: string, originalError?: unknown) {
     super(message, 'NETWORK_ERROR', undefined, originalError);
     this.name = 'NowPaymentsNetworkError';
+  }
+}
+
+export class NowPaymentsDispersionError extends NowPaymentsError {
+  constructor(message: string, originalError?: unknown) {
+    super(message, 'DISPERSION_ERROR', undefined, originalError);
+    this.name = 'NowPaymentsDispersionError';
   }
 }

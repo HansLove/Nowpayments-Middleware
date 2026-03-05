@@ -34,3 +34,12 @@ export enum PayoutStatus {
 export const ALL_PAYMENT_STATUSES = Object.values(PaymentStatus);
 export const ALL_INVOICE_STATUSES = Object.values(InvoiceStatus);
 export const ALL_PAYOUT_STATUSES = Object.values(PayoutStatus);
+
+export enum DispersionStatus {
+  PENDING = 'pending',
+  PROCESSING = 'processing',
+  SENT = 'sent',
+  FAILED = 'failed',
+}
+
+export const ALL_DISPERSION_STATUSES = Object.values(DispersionStatus);

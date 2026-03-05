@@ -243,6 +243,83 @@ NowPaymentsMiddleware.configure({
 });
 ```
 
+## Dispersion Configuration
+
+Configure on-chain token dispersion to route payouts through a controlled wallet to the final user wallet. See the [Dispersion Guide](./dispersion-guide.mdx) for architecture details.
+
+```typescript
+import {
+  NowPaymentsMiddleware,
+  PolygonDispersionProvider,
+  TronDispersionProvider,
+} from '@taloon/nowpayments-middleware';
+
+NowPaymentsMiddleware.configure({
+  apiKey: process.env.NOWPAYMENTS_API_KEY!,
+  email: process.env.NOWPAYMENTS_EMAIL,
+  password: process.env.NOWPAYMENTS_PASSWORD,
+  twoFactorSecretKey: process.env.NOWPAYMENTS_2FA_SECRET,
+  dispersion: {
+    providers: [
+      new PolygonDispersionProvider({
+        network: 'polygon',
+        rpcUrl: process.env.POLYGON_RPC_URL!,
+        controlledAddress: process.env.CONTROLLED_POLYGON_ADDRESS!,
+        privateKey: process.env.CONTROLLED_POLYGON_PRIVATE_KEY!,
+        tokenContractAddress: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F', // USDT Polygon
+        tokenDecimals: 6,
+      }),
+      new TronDispersionProvider({
+        network: 'tron',
+        fullNode: 'https://api.trongrid.io',
+        controlledAddress: process.env.CONTROLLED_TRON_ADDRESS!,
+        privateKey: process.env.CONTROLLED_TRON_PRIVATE_KEY!,
+        tokenContractAddress: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t', // USDT Tron
+        tokenDecimals: 6,
+        apiKey: process.env.TRONGRID_API_KEY,
+      }),
+    ],
+    callbacks: {
+      // Primary hook: use for persistence (covers all transitions)
+      onStatusChange: async (withdrawalId, prevStatus, currStatus, context) => {
+        await db.updateWithdrawal(withdrawalId, {
+          dispersion_status: currStatus,
+          ...(context.txHash && { dispersion_tx_hash: context.txHash }),
+          ...(context.error && { dispersion_error: context.error }),
+        });
+      },
+      onDispersionFailed: async (withdrawalId, error, network) => {
+        await alertService.notify(`Dispersion failed: ${withdrawalId} on ${network}: ${error}`);
+      },
+      onGasLow: async (network, balance, threshold) => {
+        await alertService.notify(`Gas low on ${network}: ${balance} ${threshold.currency}`);
+      },
+      onGasCritical: async (network, balance, threshold) => {
+        await alertService.notifyUrgent(`Gas critical on ${network}: ${balance} ${threshold.currency}`);
+      },
+    },
+    gasThresholds: {
+      polygon: { minimum: '0.1', critical: '0.05', currency: 'MATIC' },
+      tron: { minimum: '10', critical: '5', currency: 'TRX' },
+    },
+  },
+});
+```
+
+### Required environment variables for dispersion
+
+```bash
+# Polygon
+CONTROLLED_POLYGON_ADDRESS=0xYourControlledWallet
+CONTROLLED_POLYGON_PRIVATE_KEY=your-private-key
+POLYGON_RPC_URL=https://polygon-rpc.com
+
+# Tron
+CONTROLLED_TRON_ADDRESS=TYourControlledWallet
+CONTROLLED_TRON_PRIVATE_KEY=your-private-key
+TRONGRID_API_KEY=your-trongrid-key  # Optional
+```
+
 ## Configuration Interface
 
 ```typescript
@@ -257,9 +334,11 @@ interface NowPaymentsConfig {
   apiKey: string;                    // Required: Your NowPayments API key
   email?: string;                    // Optional: Email for authentication (required for payouts)
   password?: string;                 // Optional: Password for authentication (required for payouts)
+  twoFactorSecretKey?: string;       // Optional: TOTP secret for automatic payout verification
   baseURL?: string;                  // Optional: API base URL
   errorHandling?: 'next' | 'direct'; // Optional: Legacy error handling mode (fallback)
   onError?: ErrorHandler;            // Optional: Global error handler (takes priority over errorHandling)
+  dispersion?: DispersionConfig;     // Optional: Dispersion module configuration
 }
 ```
 

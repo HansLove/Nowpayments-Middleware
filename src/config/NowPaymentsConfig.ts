@@ -11,7 +11,8 @@ class NowPaymentsConfigSingleton {
       email: process.env.NOWPAYMENTS_EMAIL,
       password: process.env.NOWPAYMENTS_PASSWORD,
       twoFactorSecretKey: process.env.NOWPAYMENTS_2FA_SECRET,
-      baseURL: process.env.NOWPAYMENTS_BASE_URL || 'https://api.nowpayments.io/v1',
+      baseURL:
+        process.env.NOWPAYMENTS_BASE_URL || 'https://api.nowpayments.io/v1',
       errorHandling: 'next',
     };
   }
@@ -29,11 +30,27 @@ class NowPaymentsConfigSingleton {
       ...this.config,
       ...config,
     };
+
+    if (this.config.dispersion) {
+      import('@/dispersion/DispersionOrchestrator')
+        .then(({ DispersionOrchestrator }) => {
+          DispersionOrchestrator.initialize(this.config.dispersion!).catch(
+            () => {
+              // Initialization errors handled via dispersion callbacks
+            }
+          );
+        })
+        .catch(() => {
+          // Module load errors are non-fatal
+        });
+    }
   }
 
   getConfig(): NowPaymentsConfig {
     if (!this.config.apiKey) {
-      throw new Error('NowPayments API key is required. Either configure it or set NOWPAYMENTS_API_KEY environment variable.');
+      throw new Error(
+        'NowPayments API key is required. Either configure it or set NOWPAYMENTS_API_KEY environment variable.'
+      );
     }
 
     return this.config;
@@ -46,10 +63,20 @@ class NowPaymentsConfigSingleton {
       email: process.env.NOWPAYMENTS_EMAIL,
       password: process.env.NOWPAYMENTS_PASSWORD,
       twoFactorSecretKey: process.env.NOWPAYMENTS_2FA_SECRET,
-      baseURL: process.env.NOWPAYMENTS_BASE_URL || 'https://api.nowpayments.io/v1',
+      baseURL:
+        process.env.NOWPAYMENTS_BASE_URL || 'https://api.nowpayments.io/v1',
       errorHandling: 'next',
     };
+
+    import('@/dispersion/DispersionOrchestrator')
+      .then(({ DispersionOrchestrator }) => {
+        DispersionOrchestrator.reset();
+      })
+      .catch(() => {
+        // Non-fatal
+      });
   }
 }
 
-export const NowPaymentsConfiguration = NowPaymentsConfigSingleton.getInstance();
+export const NowPaymentsConfiguration =
+  NowPaymentsConfigSingleton.getInstance();
