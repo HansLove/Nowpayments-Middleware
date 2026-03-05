@@ -76,6 +76,8 @@ export interface DispersionCallbacks {
     currentStatus: DispersionStatus,
     context: {
       network: string;
+      amount: string;
+      tokenCurrency: string;
       txHash?: string;
       estimatedGasFee?: string;
       error?: string;

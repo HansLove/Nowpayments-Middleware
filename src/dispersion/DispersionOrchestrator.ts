@@ -43,7 +43,12 @@ class DispersionOrchestratorSingleton {
         target.withdrawalId,
         null,
         DispersionStatus.FAILED,
-        { network: target.network, error }
+        {
+          network: target.network,
+          amount: target.amount,
+          tokenCurrency: target.tokenCurrency,
+          error,
+        }
       );
       await this.invokeOnDispersionFailed(
         target.withdrawalId,
@@ -57,7 +62,11 @@ class DispersionOrchestratorSingleton {
       target.withdrawalId,
       null,
       DispersionStatus.PENDING,
-      { network: target.network }
+      {
+        network: target.network,
+        amount: target.amount,
+        tokenCurrency: target.tokenCurrency,
+      }
     );
     await this.invokeOnDispersionStart(
       target.withdrawalId,
@@ -88,7 +97,12 @@ class DispersionOrchestratorSingleton {
           target.withdrawalId,
           DispersionStatus.PENDING,
           DispersionStatus.FAILED,
-          { network: target.network, error }
+          {
+            network: target.network,
+            amount: target.amount,
+            tokenCurrency: target.tokenCurrency,
+            error,
+          }
         );
         await this.invokeOnDispersionFailed(
           target.withdrawalId,
@@ -103,7 +117,11 @@ class DispersionOrchestratorSingleton {
       target.withdrawalId,
       DispersionStatus.PENDING,
       DispersionStatus.PROCESSING,
-      { network: target.network }
+      {
+        network: target.network,
+        amount: target.amount,
+        tokenCurrency: target.tokenCurrency,
+      }
     );
 
     try {
@@ -120,7 +138,13 @@ class DispersionOrchestratorSingleton {
         target.withdrawalId,
         DispersionStatus.PROCESSING,
         DispersionStatus.SENT,
-        { network: target.network, txHash, estimatedGasFee }
+        {
+          network: target.network,
+          amount: target.amount,
+          tokenCurrency: target.tokenCurrency,
+          txHash,
+          estimatedGasFee,
+        }
       );
       await this.invokeOnDispersionSent(
         target.withdrawalId,
@@ -137,7 +161,12 @@ class DispersionOrchestratorSingleton {
         target.withdrawalId,
         DispersionStatus.PROCESSING,
         DispersionStatus.FAILED,
-        { network: target.network, error }
+        {
+          network: target.network,
+          amount: target.amount,
+          tokenCurrency: target.tokenCurrency,
+          error,
+        }
       );
       await this.invokeOnDispersionFailed(
         target.withdrawalId,
@@ -168,6 +197,8 @@ class DispersionOrchestratorSingleton {
     currentStatus: DispersionStatus,
     context: {
       network: string;
+      amount: string;
+      tokenCurrency: string;
       txHash?: string;
       estimatedGasFee?: string;
       error?: string;

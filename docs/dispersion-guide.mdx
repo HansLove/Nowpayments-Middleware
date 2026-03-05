@@ -62,6 +62,7 @@ NowPaymentsMiddleware.configure({
       }),
     ],
     callbacks: {
+      // ctx always includes amount and tokenCurrency - no DB lookup needed to log or notify
       onStatusChange: async (withdrawalId, _prev, status, ctx) => {
         await db.updateWithdrawal(withdrawalId, {
           dispersion_status: status,
@@ -115,10 +116,19 @@ app.post('/withdrawals',
 
 The `onFinished` callback runs before dispersion. Use it for your own business logic (mark payout complete in DB, etc.) before the dispersion state transitions begin.
 
+**ID clarification:** `PayoutWebhookPayload` contains two IDs:
+
+- `payload.id` — the **individual withdrawal ID**. This is the key used internally to look up the dispersion target in `DispersionTargetStore`.
+- `payload.batch_withdrawal_id` — the batch/payout group ID. Not used for dispersion routing.
+
+When you store a dispersion target via `createPayoutWithDispersion`, it is indexed by `withdrawal.id` from the NowPayments API response. The webhook lookup uses `payload.id`, so they always match.
+
 ```typescript
 app.post('/webhook/payout',
   NowPaymentsMiddleware.payoutWebhook({
     onFinished: async (payload) => {
+      // payload.id = individual withdrawal ID (used for dispersion lookup)
+      // payload.batch_withdrawal_id = the payout batch ID
       // Runs BEFORE dispersion starts
       await db.markPayoutFinished(payload.id, payload.hash);
     },
@@ -142,16 +152,18 @@ null -> PENDING -> PROCESSING -> SENT
 ### Callback execution order (for FINISHED webhook)
 
 1. `onFinished` (user business logic)
-2. `onStatusChange(id, null, 'pending', { network })`
+2. `onStatusChange(id, null, 'pending', { network, amount, tokenCurrency })`
 3. `onDispersionStart(id, target, network)`
 4. Gas check (if `gasThresholds` configured)
    - `onGasLow` if balance < minimum
    - `onGasCritical` + `FAILED` if balance < critical
-5. `onStatusChange(id, 'pending', 'processing', { network })`
+5. `onStatusChange(id, 'pending', 'processing', { network, amount, tokenCurrency })`
 6. `provider.estimateGasFee()`
 7. `provider.sendToken()`
-8. On success: `onStatusChange(id, 'processing', 'sent', { txHash, estimatedGasFee })` + `onDispersionSent`
-9. On failure: `onStatusChange(id, 'processing', 'failed', { error })` + `onDispersionFailed`
+8. On success: `onStatusChange(id, 'processing', 'sent', { network, amount, tokenCurrency, txHash, estimatedGasFee })` + `onDispersionSent`
+9. On failure: `onStatusChange(id, 'processing', 'failed', { network, amount, tokenCurrency, error })` + `onDispersionFailed`
+
+The `context` object always includes `amount` and `tokenCurrency` on every transition, so callbacks can log or send notifications without needing an additional DB lookup.
 
 ### Callback error isolation
 
