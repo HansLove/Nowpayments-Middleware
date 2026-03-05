@@ -633,12 +633,20 @@ interface GasThreshold {
 }
 
 interface DispersionCallbacks {
-  // Primary hook: called on every status transition
+  // Primary hook: called on every status transition.
+  // amount and tokenCurrency are always present - no DB lookup needed for logging.
   onStatusChange?: (
     withdrawalId: string,
     previousStatus: DispersionStatus | null,
     currentStatus: DispersionStatus,
-    context: { network: string; txHash?: string; estimatedGasFee?: string; error?: string }
+    context: {
+      network: string;
+      amount: string;
+      tokenCurrency: string;
+      txHash?: string;
+      estimatedGasFee?: string;
+      error?: string;
+    }
   ) => void | Promise<void>;
 
   // Convenience hooks
