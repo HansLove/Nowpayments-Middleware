@@ -26,6 +26,26 @@ pnpm add ethers@^6
 pnpm add tronweb@^6
 ```
 
+### Tron: override the axios inside tronweb
+
+As of 6.5.1, `tronweb` pins `axios` to exactly `1.18.0`, which has security advisories fixed in `1.20.0`. Since `tronweb` is a peer dependency, your app resolves it, so only your app can patch it: overrides declared by this library never reach your install. Add one at your project root:
+
+```jsonc
+// npm (package.json)
+"overrides": { "tronweb": { "axios": "^1.20.0" } }
+
+// yarn (package.json)
+"resolutions": { "tronweb/axios": "^1.20.0" }
+```
+
+```yaml
+# pnpm 10+ (pnpm-workspace.yaml)
+overrides:
+  'tronweb>axios': ^1.20.0
+```
+
+`tronweb` is not tested against the overridden version, so run a transfer on a Tron testnet (Nile or Shasta) before deploying. Remove the override once a `tronweb` release ships `axios` 1.20.0 or later.
+
 ## Setup
 
 ### 1. Configure providers
