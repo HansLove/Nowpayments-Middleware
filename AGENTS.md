@@ -469,7 +469,6 @@ tests/unit/
 
 - [testing-strategy.md](testing-strategy.md) - Comprehensive testing approach and patterns
 - [local-installation.md](local-installation.md) - Local development setup
-- [nowpayments-middleware-plan.md](nowpayments-middleware-plan.md) - Project planning and roadmap
 - [CHANGELOG.md](CHANGELOG.md) - Version history and changes
 
 ### External Resources
